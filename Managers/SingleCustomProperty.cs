@@ -8,13 +8,13 @@ using SolidWorks.Interop.swconst;
 
 namespace SingularityCore.Managers
 {
-    class SingleCustomProperty : ISingleCustomProperty
+    internal class SingleCustomProperty : ISingleCustomProperty
     {
         public SingleCustomProperty(string name, ISingleCustomPropertyManager custPropMgr, CustomPropertyType customPropertyType)
         {
             CustPropMgr = custPropMgr;
             CustomPropertyType = customPropertyType;
-            Name = name
+            Name = name;
 
         }
         string _name;

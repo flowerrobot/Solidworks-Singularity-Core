@@ -3,18 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using SingularityBase;
-using SingularityBase.Interfaces;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 
-namespace SingleCore.Events
+namespace SingularityCore
 {
-    public sealed class SingleDrawingDoc : SingleModelDoc, ISingleDrawingDoc
+    internal sealed class SingleDrawingDoc : SingleModelDoc, ISingleDrawingDoc
     {
 
 
 
-        public new DrawingDoc Document { get; }
+        public  DrawingDoc Document { get; }
         public override swDocumentTypes_e Type => swDocumentTypes_e.swDocDRAWING;
 
         internal SingleDrawingDoc(DrawingDoc doc) : base((ModelDoc2)doc)

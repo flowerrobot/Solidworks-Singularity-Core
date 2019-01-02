@@ -9,13 +9,13 @@ using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using SingularityCore.Managers;
 
-namespace SingleCore.Events
+namespace SingularityCore
 {
-    public sealed class SingleAssemblyDoc : SingleModelDoc, ISingleAssemblyDoc
+    internal sealed class SingleAssemblyDoc : SingleModelDoc, ISingleAssemblyDoc
     {
         List<ISingleConfiguration> _configs = new List<ISingleConfiguration>();
 
-        public new AssemblyDoc Document { get; }
+        public AssemblyDoc Document { get; }
         public override swDocumentTypes_e Type => swDocumentTypes_e.swDocASSEMBLY;
 
         internal SingleAssemblyDoc(AssemblyDoc doc) : base((ModelDoc2)doc)

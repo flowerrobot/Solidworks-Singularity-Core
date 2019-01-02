@@ -21,7 +21,7 @@ namespace SingularityCore.Managers
             get {
                 if (_customPropertyManager != null) return _customPropertyManager;
                 _customPropertyManager = new SingleCustomPropertyManager(Doc, this);
-                return _customPropertyManager
+                return _customPropertyManager;
             }
         }
 

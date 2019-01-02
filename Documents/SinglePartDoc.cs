@@ -9,9 +9,9 @@ using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using SingularityCore.Managers;
 
-namespace SingleCore.Events
+namespace SingularityCore
 {
-    public sealed class SinglePartDoc : SingleModelDoc, ISinglePartDoc
+    internal sealed class SinglePartDoc : SingleModelDoc, ISinglePartDoc
     {
         List<ISingleConfiguration> _configs = new List<ISingleConfiguration>();
 

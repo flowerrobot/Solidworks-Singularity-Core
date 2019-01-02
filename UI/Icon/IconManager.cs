@@ -1,47 +1,98 @@
-﻿using System;
+﻿using SingularityBase.UI;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Drawing;
 using System.IO;
-using SingularityBase.UI.Icons;
+using System.Linq;
 
-namespace SingleCore.UI.Icons
+namespace SingularityCore.UI
 {
-    public sealed class IconManager : IIconManager
+    internal sealed class IconManager : IIconManager
     {
-        private static IconManager _iconManager;
-        public static IconManager GetIconManager => _iconManager ?? (_iconManager = new IconManager());
+        //private static IconManager _iconManager;
+        //public static IconManager GetIconManager => _iconManager ?? (_iconManager = new IconManager());
 
-        public static string Dir = ModuleLoader.ModuleLoader.WorkingPath;
+        public static string Dir = PluginLoader.WorkingPath;
         public NLog.Logger Logger { get; } = NLog.LogManager.GetLogger("IconManager");
+
+        #region Image Path
+        /// <inheritdoc />
+        public string ImagePathSize20 { get; private set; }
         /// <inheritdoc />
         public string ImagePathSize32 { get; private set; }
         /// <inheritdoc />
-        public string ImagePathSize16 { get; private set; }
+        public string ImagePathSize40 { get; }
+        /// <inheritdoc />
+        public string ImagePathSize64 { get; }
+        /// <inheritdoc />
+        public string ImagePathSize96 { get; }
+        /// <inheritdoc />
+        public string ImagePathSize128 { get; }
+
+        public string[] CmdImagePaths => new[]{ImagePathSize20, ImagePathSize32, ImagePathSize40, ImagePathSize64, ImagePathSize96, ImagePathSize128};
+        #endregion
+
+        #region Addin Icon
+        /// <inheritdoc />
+        public string AddinIconSize20 { get; }
 
         /// <inheritdoc />
-        public string AddinIconSize32 { get; private set; }
+        public string AddinIconSize32 { get; }
+
         /// <inheritdoc />
-        public string AddinIconSize16 { get; private set; }
+        public string AddinIconSize40 { get; }
 
-        public List<IIconDef> Images { get; } = new List<IIconDef>();
+        /// <inheritdoc />
+        public string AddinIconSize64 { get; }
 
-        private IconManager()
+        /// <inheritdoc />
+        public string AddinIconSize96 { get; }
+
+        /// <inheritdoc />
+        public string AddinIconSize128 { get; }
+
+        public string[] AddinIconPaths => new[] {AddinIconSize20, AddinIconSize32, AddinIconSize40, AddinIconSize64, AddinIconSize96, AddinIconSize128};
+        #endregion
+
+        #region Default Images
+        /// <inheritdoc />
+        public Bitmap DefaultSize20 => SingularityCore.Properties.Resources.Singularity_20;
+        /// <inheritdoc />
+        public Bitmap DefaultSize32 => SingularityCore.Properties.Resources.Singularity_32;
+        /// <inheritdoc />
+        public Bitmap DefaultSize40 => SingularityCore.Properties.Resources.Singularity_40;
+        /// <inheritdoc />
+        public Bitmap DefaultSize64 => SingularityCore.Properties.Resources.Singularity_64;
+        /// <inheritdoc />
+        public Bitmap DefaultSize96 => SingularityCore.Properties.Resources.Singularity_96;
+        /// <inheritdoc />
+        public Bitmap DefaultSize128 => SingularityCore.Properties.Resources.Singularity_128;
+        #endregion
+
+
+        public List<ISingleCommandDef> Images { get; } = new List<ISingleCommandDef>();
+
+        private const string IconName = "SingularityAddin";
+        internal IconManager()
         {
-
-            ImagePathSize32 = Path.Combine(Dir, "SolidworksAddinLargeImage" + ext);
-            ImagePathSize16 = Path.Combine(Dir, "SolidworksAddinSmallImage" + ext);
+            ImagePathSize20 = Path.Combine(Dir, IconName+ "20" + ext);
+            ImagePathSize32 = Path.Combine(Dir, IconName+ "32" + ext);
+            ImagePathSize40 = Path.Combine(Dir, IconName+ "40" + ext);
+            ImagePathSize64 = Path.Combine(Dir, IconName+ "64" + ext);
+            ImagePathSize96 = Path.Combine(Dir, IconName+ "96" + ext);
+            ImagePathSize128 = Path.Combine(Dir, IconName+ "128" + ext);
+            
 
             Logger.Trace("Large image {0}", ImagePathSize32);
-            Logger.Trace("Small Image {0}", ImagePathSize16);
 
 
         }
 
-        const int largeSize = 24;
-        const int smallSize = 16;
-        const string ext = ".bmp";
+        private const int largeSize = 24;
+        private const int smallSize = 16;
+
+        private const string ext = ".bmp";
+        //http://www.iconarchive.com/show/concave-icons-by-gakuseisean/Black-Internet-icon.html
 
         /// <inheritdoc />
         public bool AppendImages()
@@ -49,51 +100,77 @@ namespace SingleCore.UI.Icons
             try
             {
                 Logger.Trace("Appending {0} images", Images.Count());
+
                 //Merge images together side by side by both image sizes
-                Bitmap lrg = new Bitmap(largeSize * (1 + Images.Count()), largeSize);
-                Bitmap sml = new Bitmap(smallSize * (1 + Images.Count()), smallSize);
 
-                int count = 0;
-                using (Graphics lrgGra = Graphics.FromImage(lrg))
+                int[] sizes = new[] {20, 32, 40, 64, 96, 128};
+                Bitmap[] bm = new Bitmap[sizes.Length-1];
+                Graphics[] gra = new Graphics[sizes.Length-1];
+
+                try
                 {
-                    using (Graphics smlGra = Graphics.FromImage(sml))
+                    //initialise bit maps
+                    for (int i = 0; i < sizes.Length; i++)
                     {
-                        foreach (IconDef img in Images)
+                        bm[i] = new Bitmap(sizes[i] * (1 + Images.Count()), sizes[i]);
+                        gra[i] = Graphics.FromImage(bm[i]);
+                    }
+
+                    int count = 0;
+
+                    foreach (ISingleCommandDef cmd in Images)
+                    {
+                        try
                         {
-                            try
+                            if (cmd.Command is ISwCommand swCmd)
                             {
-                                img.Index = count;
-                                Bitmap cmdsm = img.ImageSize16 ?? DefaultSize16;
-                                Bitmap cmdlrg = img.ImageSize32 ?? DefaultSize32;
+                                IIconDef img = swCmd.Icons;
 
-                                lrgGra.DrawImage(cmdsm, count * largeSize, 0, largeSize, largeSize);
-                                smlGra.DrawImage(cmdlrg, count * smallSize, 0, smallSize, smallSize);
+                                ((SingleBaseCommand)cmd).IconIndex = count;
+                                Bitmap[] iconBm = new[]
+                                {
+                                    img.ImageSize20 ?? DefaultSize20, img.ImageSize32 ?? DefaultSize32,
+                                    img.ImageSize40 ?? DefaultSize40, img.ImageSize64 ?? DefaultSize64,
+                                    img.ImageSize96 ?? DefaultSize96, img.ImageSize128 ?? DefaultSize128
+                                };
 
-                                count += 1;
+                                for (int i = 0; i < sizes.Length; i++)
+                                {
+                                    gra[i].DrawImage(iconBm[i], count * sizes[i], 0, sizes[i], sizes[i]);
+                                }
                             }
-                            catch (Exception ex)
-                            {
-                                Logger.Error(ex, "ID :{0}", img.Owner.Id);
-                            }
+
+                            count += 1;
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Error(ex, "ID :{0}", cmd.Id);
                         }
                     }
                 }
-                lrg.Save(ImagePathSize32);
-                sml.Save(ImagePathSize16);
+                finally
+                {
+                    for (int i = 0; i < sizes.Length; i++)
+                    {
+                        gra[i].Dispose();
+                        gra[i] = null;
+                    }
+                }
+
+                for (int i = 0; i < sizes.Length; i++)
+                   bm[i].Save(CmdImagePaths[i]);
+                
 
                 return true;
             }
             catch (Exception ex)
             {
-                //TO DO output to log
                 Logger.Error(ex);
             }
             return false;
         }
-        /// <inheritdoc />
-        public Bitmap DefaultSize16 => Properties.Resources.OutotecO_16;
-        /// <inheritdoc />
-        public Bitmap DefaultSize32 => Properties.Resources.OutotecO_24;
+
+
         /// <inheritdoc />
         public string ExtractImage(Bitmap img)
         {

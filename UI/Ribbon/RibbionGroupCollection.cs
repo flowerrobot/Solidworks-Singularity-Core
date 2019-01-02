@@ -1,107 +1,110 @@
-﻿using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using SingularityBase;
-using SingularityBase.UI.Commands;
-using SingularityBase.UI.Icons;
+﻿using SingularityBase;
+using SingularityBase.UI;
 using SingularityBase.UI.Ribbon;
-using SingleCore.Commands;
 using SolidWorks.Interop.sldworks;
-using SolidWorks.Interop.swconst;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using SingularityBase.UI.Commands;
 
-namespace SingleCore.UI
+namespace SingularityCore.UI
 {
     // This defined a tab within the ribbon to implement onto the Solidworks UI
     internal class RibbonGroupCollection : IRibbonGroupCollection
     {
-         static int _idCount = 0;
-        public RibbonGroupCollection(string tabName, ISingleSldWorks sldworks)
+        private static int _idCount = 0;
+        public RibbonGroupCollection(string tabName, ISingleSldWorks solidWorks)
         {
-            SwApp = sldworks;
+            SolidWorks = solidWorks;
             TabName = tabName;
             Id = _idCount += 1;
         }
         /// <inheritdoc />
         public string TabName { get; }
-        /// <inheritdoc />
-        public ISingleSldWorks SwApp { get; }
 
+        /// <inheritdoc />
+        public ISingleSldWorks SolidWorks { get; }
+
+        /// <inheritdoc />
         public int Id { get; }
 
+        internal ICommandTabBox CommandGroup { get; set; }
+
         #region AddButton
-        /// <inheritdoc />
-        public ISwButton AddButton(string commandName)
-        {
-            var cmd =new SwButton(SwApp, commandName);
-            _commands.Add(cmd);
-            return cmd;
-        }
+        ///// <inheritdoc />
+        //public ISwButton AddButton(string commandName)
+        //{
+        //    var cmd =new SwButton(SwApp, commandName);
+        //    _commands.Add(cmd);
+        //    return cmd;
+        //}
 
-        public ISwButton AddButton(string commandName, string commandToolTop, DocumentTypes documentTypes)
-        {
-            SwButton b = (SwButton)AddButton(commandName);
-            b.CommandToolTop = commandToolTop;
-            b.DocumentTypes = documentTypes;
-            return b;
-        }
+        //public ISwButton AddButton(string commandName, string commandToolTop, DocumentTypes documentTypes)
+        //{
+        //    SwButton b = (SwButton)AddButton(commandName);
+        //    b.CommandToolTop = commandToolTop;
+        //    b.DocumentTypes = documentTypes;
+        //    return b;
+        //}
 
-        public ISwButton AddButton(string commandName, string commandToolTop, DocumentTypes documentTypes, int ribbonOrder)
-        {
-            SwButton b = (SwButton)AddButton(commandName);
-            b.CommandToolTop = commandToolTop;
-            b.DocumentTypes = documentTypes;
-            b.RibbonOrder = ribbonOrder;
-            return b;
-        }
+        //public ISwButton AddButton(string commandName, string commandToolTop, DocumentTypes documentTypes, int ribbonOrder)
+        //{
+        //    SwButton b = (SwButton)AddButton(commandName);
+        //    b.CommandToolTop = commandToolTop;
+        //    b.DocumentTypes = documentTypes;
+        //    b.RibbonOrder = ribbonOrder;
+        //    return b;
+        //}
 
-        public ISwButton AddButton(string commandName, string commandToolTop, DocumentTypes documentTypes, int ribbonOrder,
-            swCommandTabButtonTextDisplay_e ribbonDisplayType)
-        {
-            SwButton b = (SwButton)AddButton(commandName);
-            b.CommandToolTop = commandToolTop;
-            b.DocumentTypes = documentTypes;
-              b.RibbonOrder = ribbonOrder;
-            b.RibbionDisplayType = ribbonDisplayType;
-            return b;
-        }
+        //public ISwButton AddButton(string commandName, string commandToolTop, DocumentTypes documentTypes, int ribbonOrder,
+        //    swCommandTabButtonTextDisplay_e ribbonDisplayType)
+        //{
+        //    SwButton b = (SwButton)AddButton(commandName);
+        //    b.CommandToolTop = commandToolTop;
+        //    b.DocumentTypes = documentTypes;
+        //      b.RibbonOrder = ribbonOrder;
+        //    b.RibbionDisplayType = ribbonDisplayType;
+        //    return b;
+        //}
 
-        public ISwButton AddButton(string commandName, string commandToolTop, DocumentTypes documentTypes, int ribbonOrder,
-            swCommandTabButtonTextDisplay_e ribbonDisplayType, string menuName = "", int menuOrder = -1,
-            CommandLocation menuType = CommandLocation.All)
-        {
+        //public ISwButton AddButton(string commandName, string commandToolTop, DocumentTypes documentTypes, int ribbonOrder,
+        //    swCommandTabButtonTextDisplay_e ribbonDisplayType, string menuName = "", int menuOrder = -1,
+        //    CommandLocation menuType = CommandLocation.All)
+        //{
 
-            SwButton b = (SwButton)AddButton(commandName);
-            b.CommandToolTop = commandToolTop;
-            b.DocumentTypes = documentTypes;
-            b.RibbonOrder = ribbonOrder;
-            b.RibbionDisplayType = ribbonDisplayType;
-            b.MenuName = menuName;
-            b.MenuOrder = menuOrder;
-            b.MenuType = menuType;
-            return b;
-        }
+        //    SwButton b = (SwButton)AddButton(commandName);
+        //    b.CommandToolTop = commandToolTop;
+        //    b.DocumentTypes = documentTypes;
+        //    b.RibbonOrder = ribbonOrder;
+        //    b.RibbionDisplayType = ribbonDisplayType;
+        //    b.MenuName = menuName;
+        //    b.MenuOrder = menuOrder;
+        //    b.MenuType = menuType;
+        //    return b;
+        //}
 
-        public ISwButton AddButton(string commandName, string commandToolTop, DocumentTypes documentTypes, int ribbonOrder,
-            swCommandTabButtonTextDisplay_e ribbonDisplayType, string menuName, int menuOrder, CommandLocation menuType,
-            IIconDef icons)
-        {
-            SwButton b = (SwButton)AddButton(commandName);
-            b.CommandToolTop = commandToolTop;
-            b.DocumentTypes = documentTypes;
-            b.RibbonOrder = ribbonOrder;
-            b.RibbionDisplayType = ribbonDisplayType;
-            b.MenuName = menuName;
-            b.MenuOrder = menuOrder;
-            b.MenuType = menuType;
-            b.Icons = icons;
-            return b;
-        }
-#endregion
-        public ISwFlyOut AddFlyOutGroup(string commandName)
-        {
-            var cmd = new SwFlyOut(SwApp, commandName);
-            _commands.Add(cmd);
-            return cmd;
-        }
+        //public ISwButton AddButton(string commandName, string commandToolTop, DocumentTypes documentTypes, int ribbonOrder,
+        //    swCommandTabButtonTextDisplay_e ribbonDisplayType, string menuName, int menuOrder, CommandLocation menuType,
+        //    IIconDef icons)
+        //{
+        //    SwButton b = (SwButton)AddButton(commandName);
+        //    b.CommandToolTop = commandToolTop;
+        //    b.DocumentTypes = documentTypes;
+        //    b.RibbonOrder = ribbonOrder;
+        //    b.RibbionDisplayType = ribbonDisplayType;
+        //    b.MenuName = menuName;
+        //    b.MenuOrder = menuOrder;
+        //    b.MenuType = menuType;
+        //    b.Icons = icons;
+        //    return b;
+        //}
+        #endregion
+        //public ISwFlyOut AddFlyOutGroup(string commandName)
+        //{
+        //    var cmd = new SwFlyOut(SwApp, commandName);
+        //    _commands.Add(cmd);
+        //    return cmd;
+        //}
 
         ///// <inheritdoc />
         //public ISwFlyOut AddFlyOut(string commandName)
@@ -116,12 +119,25 @@ namespace SingleCore.UI
         //    return AddCommand(btn) as ISwFlyOutButton;
         //}
         /// <inheritdoc />
-        public ReadOnlyCollection<ISwCommand> Commands => _commands.AsReadOnly();
-        private List<ISwCommand> _commands = new List<ISwCommand>();
-       
+        public ReadOnlyCollection<ISingleCommandDef> Commands => RibbonCommands.Values.ToList().AsReadOnly();
+        public ReadOnlyCollection<ISingleCommandDef> MenuCommands => _menuCommands.Values.ToList().AsReadOnly();
+
+        internal SortedList<int, ISingleCommandDef> RibbonCommands { get; } = new SortedList<int,ISingleCommandDef>(new CommandSorter<int>());
+        private SortedList<int, ISingleCommandDef> _menuCommands { get; } = new SortedList<int,ISingleCommandDef>(new CommandSorter<int>());
 
 
-        internal ICommandTabBox CommandGroup { get; set; }
+        internal void AddButtonOrFlyOut(SingleBaseCommand cmd)
+        {
+            RibbonCommands.Add(((ISwRibbon)cmd.Command).RibbonOrder,cmd);
+            _menuCommands.Add(((ISwMenu)cmd.Command).MenuOrder,cmd);
+        }
 
+
+        public void Dispose()
+        {
+            System.Runtime.InteropServices.Marshal.ReleaseComObject(CommandGroup);
+            CommandGroup = null;
+            //TODO dispose of each command?
+        }
     }
 }

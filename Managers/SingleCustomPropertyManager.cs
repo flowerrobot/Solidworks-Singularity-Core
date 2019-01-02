@@ -5,7 +5,6 @@ using SolidWorks.Interop.swconst;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace SingularityCore.Managers
 {
@@ -19,7 +18,8 @@ namespace SingularityCore.Managers
         public ISingleModelDoc Document { get; private set; }
 
         public ISingleConfiguration Configuration { get; private set; }
-        ICustomPropertyManager _customPropertyManager;
+
+        private ICustomPropertyManager _customPropertyManager;
         public ICustomPropertyManager CustomPropertyManager
         {
             get {
@@ -37,6 +37,21 @@ namespace SingularityCore.Managers
             return (swCustomInfoAddResult_e)CustomPropertyManager.Add3(Name, (int)Type, Value, OverwriteExisting);
         }
 
+        public ISingleCustomProperty GetProperty(string Name)
+        {
+            CustomPropertyType a;
+            if (Configuration == null)
+                a = CustomPropertyType.CustomProperty;
+            else
+                a = CustomPropertyType.ConfigurationCustomProperty;
+
+
+            if (((string[])CustomPropertyManager.GetNames()).Any(t => t.Equals(Name, StringComparison.CurrentCultureIgnoreCase)))
+                return new SingleCustomProperty(Name, this, a);
+
+            return null;
+        }
+
         public swCustomInfoDeleteResult_e Delete(string Name)
         {
             return (swCustomInfoDeleteResult_e)CustomPropertyManager.Delete2(Name);
@@ -44,16 +59,17 @@ namespace SingularityCore.Managers
 
         public swCustomInfoDeleteResult_e DeleteAll()
         {
-            swCustomInfoDeleteResult_e res;
+            int res = 0;
             foreach (string item in ((string[])CustomPropertyManager.GetNames()))
-                res = Delete(item);
-            return res;
+                res += (int)Delete(item);
+
+            return res == 0 ? swCustomInfoDeleteResult_e.swCustomInfoDeleteResult_OK : swCustomInfoDeleteResult_e.swCustomInfoDeleteResult_NotPresent;
         }
 
         public IEnumerable<ISingleCustomProperty> GetAll()
         {
             List<ISingleCustomProperty> props = new List<ISingleCustomProperty>();
-            foreach(string name in CustomPropertyManager.GetNames())
+            foreach (string name in CustomPropertyManager.GetNames())
             {
                 if (Configuration == null)
                     props.Add(new SingleCustomProperty(name, this, CustomPropertyType.CustomProperty));

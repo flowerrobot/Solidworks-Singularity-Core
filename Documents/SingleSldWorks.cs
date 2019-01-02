@@ -3,22 +3,26 @@ using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
+using SingleCore;
+using SingleCore.UI;
+using SingularityBase.UI.Ribbon;
 
 namespace SingularityCore
 {
-    internal class SingleSldWorks : ISingleSldWorks
+    internal class SingleSldWorks : ISingleSldWorks, IDisposable
     {
 
         public SingleSldWorks(ISldWorks swapp, int addinId)
         {
             Solidworks = swapp;
             AddinId = addinId;
-            Ribbons = new List<IRibbonCollection>().AsReadOnly();
+
+            CommandManager = Solidworks.GetCommandManager(AddinId);
         }
-       public static ISingleSldWorks GetSolidworks { get; }
-        public ISldWorks Solidworks { get; }
+        public static ISingleSldWorks GetSolidworks { get; }
+        public ISldWorks Solidworks { get; private set; }
         /// <inheritdoc />
         public int AddinId { get; }
 
@@ -26,14 +30,14 @@ namespace SingularityCore
         /// <inheritdoc />
         public int GetNextID => idCount += 1;
         /// <inheritdoc />
-        public CommandManager CommandManager => Solidworks.GetCommandManager(AddinId);
+        public CommandManager CommandManager { get; private set; }
 
 
         /// <inheritdoc />
         public ISingleModelDoc GetDocumentByName(string fileName)
         {
             object docs = Solidworks.GetDocuments();
-            foreach (var doc in (object[])docs)
+            foreach (object doc in (object[])docs)
             {
                 if (System.IO.Path.GetFileName((doc as ModelDoc2)?.GetPathName() ?? "").Equals(fileName, StringComparison.CurrentCultureIgnoreCase))
                     return ConvertDocument((ModelDoc2)doc);
@@ -58,37 +62,14 @@ namespace SingularityCore
             }
         }
 
-        /// <inheritdoc />
-        public ReadOnlyCollection<IRibbonCollection> Ribbons { get; private set; }
-        /// <inheritdoc />
-        public IRibbonCollection GetRibbonByName(string name = "", bool createIfMissing = true)
+       
+
+        public void Dispose()
         {
-            if (string.IsNullOrWhiteSpace(name)) name = CommandMgr.DefaultRibbonName; //Assign default
-
-            IRibbonCollection res = Ribbons.FirstOrDefault(r => r.RibbonName.Equals(name));
-            if (res == null && createIfMissing)
-            {
-                res = new RibbonCollection(name, this);
-                List<IRibbonCollection> lst = Ribbons.ToList();
-                lst.Add(res);
-
-                Ribbons = lst.AsReadOnly();
-            }
-            return res;
-
-        }
-
-
-        public Boolean BeginSetup()
-        {
-
-        }
-        public bool DisconnectFromSW()
-        {
-            System.Runtime.InteropServices.Marshal.ReleaseComObject(iCmdMgr);
-            iCmdMgr = null;
-            System.Runtime.InteropServices.Marshal.ReleaseComObject(iSwApp);
-            iSwApp = null;
+            System.Runtime.InteropServices.Marshal.ReleaseComObject(CommandManager);
+            CommandManager = null;
+            System.Runtime.InteropServices.Marshal.ReleaseComObject(Solidworks);
+            Solidworks = null;
         }
     }
 }

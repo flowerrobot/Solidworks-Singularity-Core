@@ -30,6 +30,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>Images\SingularityIcon.ico</ApplicationIcon>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
       <HintPath>..\..\..\..\..\..\..\..\..\temp\_Nugetpackages\NLog.4.5.11\lib\net40-client\NLog.dll</HintPath>
@@ -60,6 +63,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="SingleCommandMgr.cs" />
+    <Compile Include="DefinedPlugin.cs" />
     <Compile Include="Documents\SingleAssemblyDoc.cs" />
     <Compile Include="Documents\SingleDrawingDoc.cs" />
     <Compile Include="Documents\SingleModelDoc.cs" />
@@ -70,18 +80,24 @@
     <Compile Include="Managers\SingleConfiguration.cs" />
     <Compile Include="Managers\SingleCustomProperty.cs" />
     <Compile Include="Managers\SingleCutListManager.cs" />
+    <Compile Include="PluginLoader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Documents\SingleSldWorks.cs" />
-    <Compile Include="UI\Commands\SwButton.cs" />
-    <Compile Include="UI\Commands\SwCommand.cs" />
-    <Compile Include="UI\Commands\SwCustomFunction.cs" />
-    <Compile Include="UI\Commands\SwFlyOut.cs" />
-    <Compile Include="UI\Commands\SwFlyOutButton.cs" />
-    <Compile Include="UI\Icon\IconDef.cs" />
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Commands\SingleBaseFlyoutButtonCommand.cs" />
+    <Compile Include="UI\Commands\SingleBaseCustomCommand.cs" />
+    <Compile Include="UI\Icon\IconWrapper.cs" />
     <Compile Include="UI\Icon\IconManager.cs" />
+    <Compile Include="UI\Ribbon\CommandSorter.cs" />
     <Compile Include="UI\Ribbon\MenuCollection.cs" />
     <Compile Include="UI\Ribbon\RibbionCollection.cs" />
     <Compile Include="UI\Ribbon\RibbionGroupCollection.cs" />
+    <Compile Include="UI\Commands\SingleBaseCommand.cs" />
+    <Compile Include="UI\Commands\SingleBaseFlyoutCommand.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Singularity Base\Singularity Base.csproj">
@@ -90,8 +106,32 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.config" />
     <None Include="packages.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
   </ItemGroup>
   <ItemGroup />
+  <ItemGroup>
+    <Content Include="Images\SingularityIcon.ico" />
+    <Content Include="Images\Singularity_128.png" />
+    <Content Include="Images\Singularity_16.png" />
+    <None Include="Images\Singularity_40.png" />
+    <None Include="Images\Singularity_20.png" />
+    <Content Include="Images\Singularity_24.png" />
+    <Content Include="Images\Singularity_32.png" />
+    <Content Include="Images\Singularity_48.png" />
+    <Content Include="Images\Singularity_64.png" />
+    <Content Include="Images\Singularity_72.png" />
+    <Content Include="Images\Singularity_96.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

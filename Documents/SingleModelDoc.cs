@@ -9,19 +9,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace SingleCore
+namespace SingularityCore
 {
-    public abstract class SingleModelDoc : ISingleModelDoc
+    internal abstract class SingleModelDoc : ISingleModelDoc
     {
         public abstract void Dispose();
 
 
         internal SingleModelDoc(IModelDoc2 doc)
         {
-            Document = doc;
+            ModelDoc = doc;
         }
 
-        public IModelDoc2 Document { get; }
+        public IModelDoc2 ModelDoc { get; }
         public abstract swDocumentTypes_e Type { get; }
 
         private ISingleCustomPropertyManager docProp;
@@ -35,7 +35,7 @@ namespace SingleCore
 
         public ISingleSldWorks SldWorks => SingleSldWorks.GetSolidworks;
 
-        public IFeature GetFirstFeature => Document.FirstFeature();
+        public IFeature GetFirstFeature => ModelDoc.FirstFeature();
 
         public IEnumerable<IFeature> GetFeatures
         {
@@ -61,7 +61,7 @@ namespace SingleCore
 
         public void ClearSelection()
         {
-            Document.ClearSelection2(true);
+            ModelDoc.ClearSelection2(true);
         }
 
         public bool EditUnsuppress(IEnumerable<IFeature> features)
@@ -71,7 +71,7 @@ namespace SingleCore
             {
                 fea.Select2(true, -1);
             }
-            return Document.EditUnsuppress2();
+            return ModelDoc.EditUnsuppress2();
         }
 
         public bool EditSuppress(IEnumerable<IFeature> features)
@@ -81,12 +81,12 @@ namespace SingleCore
             {
                 fea.Select2(true, -1);
             }
-            return Document.EditSuppress2();
+            return ModelDoc.EditSuppress2();
         }
 
         public bool ForceRebuild(bool TopOnly)
         {
-            return Document.ForceRebuild3(TopOnly);
+            return ModelDoc.ForceRebuild3(TopOnly);
         }
 
         #region Events
