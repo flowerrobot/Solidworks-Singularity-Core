@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using SingularityBase.UI.Ribbon;
 using SingularityBase;
+using SingularityBase.UI;
 using SingularityCore;
 using SolidWorks.Interop.sldworks;
 
@@ -15,6 +15,7 @@ namespace SingularityCore.UI
      internal class RibbonCollection : IRibbonCollection
     {
         private static int idCount = 0;
+
          /// <inheritdoc />
         public RibbonCollection(string ribbonName, ISingleSldWorks solidWorks)
         {

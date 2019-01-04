@@ -119,11 +119,12 @@ namespace SingularityCore
 
         public IEventSupressor DisableEvents()
         {
-            EventSupressor ev = new EventSupressor();
+            //EventSupressor ev = new EventSupressor();
             //   if (level == EventLevel.ThisDocument)
-            ev.Owner = this;
-            Disables.Add(ev.Id, ev);
-            return ev;
+            //ev.Owner = this;
+            //Disables.Add(ev.Id, ev);
+            //return ev;
+            return null;
         }
         public Dictionary<int, IEventSupressor> Disables { get; } = new Dictionary<int, IEventSupressor>();
 

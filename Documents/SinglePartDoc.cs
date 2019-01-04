@@ -13,11 +13,12 @@ namespace SingularityCore
 {
     internal sealed class SinglePartDoc : SingleModelDoc, ISinglePartDoc
     {
-        List<ISingleConfiguration> _configs = new List<ISingleConfiguration>();
+        private readonly List<ISingleConfiguration> _configs = new List<ISingleConfiguration>();
 
         public override swDocumentTypes_e Type => swDocumentTypes_e.swDocPART;
-        public new PartDoc Document { get; }
+        public  PartDoc Document { get; }
 
+        // ReSharper disable once SuspiciousTypeConversion.Global
         internal SinglePartDoc(PartDoc doc) : base((ModelDoc2)doc)
         {
             Document = doc;
@@ -42,11 +43,11 @@ namespace SingularityCore
 
         public ISingleConfiguration Configuration(string name)
         {
-            string[] names = (string[])((ModelDoc2)Document).GetConfigurationNames();
+            string[] names = (string[])ModelDoc.GetConfigurationNames();
             if (!names.Any(t => t.Equals(name, StringComparison.CurrentCultureIgnoreCase))) return null;
             var con = _configs.FirstOrDefault(t => t.ConfigName.Equals(name, StringComparison.CurrentCultureIgnoreCase));
             if (con != null) return con;
-            con = new SingleConfiguration(((ModelDoc2)Document).GetConfigurationByName(name));
+            con = new SingleConfiguration(ModelDoc.GetConfigurationByName(name));
             _configs.Add(con);
             return con;
         }        
@@ -54,10 +55,10 @@ namespace SingularityCore
         public IEnumerable<ISingleConfiguration> Configurations
         {
             get {
-                foreach (string name in (string[])((ModelDoc2)Document).GetConfigurationNames())
+                foreach (string name in (string[])ModelDoc.GetConfigurationNames())
                 {
                     if (null == _configs.FirstOrDefault(t => t.ConfigName.Equals(name, StringComparison.CurrentCultureIgnoreCase)))
-                        _configs.Add(new SingleConfiguration(((ModelDoc2)Document).GetConfigurationByName(name)));
+                        _configs.Add(new SingleConfiguration(ModelDoc.GetConfigurationByName(name)));
                 }
                 return _configs.AsReadOnly();
             }

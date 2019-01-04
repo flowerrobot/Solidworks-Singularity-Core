@@ -1,6 +1,5 @@
 ﻿using SingularityBase;
 using SingularityBase.UI;
-using SingularityBase.UI.Commands;
 using SingularityCore.UI;
 using System;
 using System.Collections.Generic;
@@ -30,7 +29,7 @@ namespace SingularityCore
         /// Core files are plugins which are part of the core Singularity
         /// </summary>
 #if DEBUG
-        private readonly FileInfo[] coreFiles = new[] { new FileInfo(@"C:\Users\setruh\OneDrive\Documents\Programming\GitHub\SW Addin\OswCoreCommands\bin\Debug\OswCoreCommands.dll") };
+        private readonly FileInfo[] coreFiles = new[] { new FileInfo(@"C:\Users\sethr\OneDrive\Documents\Programming\GitHub\Solidworks Addin\Singularity Addin\Singularity Tests\bin\Debug\Singularity Tests.dll") };
 #else
         private readonly FileInfo[] coreFiles = new[] { new new FileInfo(System.IO.Path.Combine(DirectoryPath, "OswCoreCommands.dll"))};
 #endif
@@ -276,25 +275,25 @@ namespace SingularityCore
                         foreach (Type type in assembly.GetTypes())
                         {
                             // We only want to create an instance if is a normal command, but is not a flyout button - as they will be created differently
-                            if (BaseFunc.IsAssignableFrom(type) && !BaseFunc.IsAssignableFrom(FlyOutBtnFunc) && !(type.IsAbstract || type.IsInterface))
+                            if (BaseFunc.IsAssignableFrom(type) && !FlyOutBtnFunc.IsAssignableFrom(type) && !(type.IsAbstract || type.IsInterface))
                             {
                                 try
                                 {
                                     //Create the instance of the class & check if its suitable to load for this user
                                     if (Activator.CreateInstance(type) is ISwBaseFunction instance)
                                     {
-                                        ISingleCommandDef cmd;
+                                        SingleBaseCommand cmd;
                                         if (instance is ISwFlyOut Flyout)
                                         {
-                                            cmd = new SingleBaseFlyoutCommand(SolidWorks, Flyout, CmdCounter += 1, newPlugin);
+                                            cmd = new SingleBaseFlyoutGroup(SolidWorks, Flyout, CmdCounter += 1, newPlugin);
                                             //Through each sub button implement it if suitable
                                             foreach (Type subBtnType in Flyout.SubButtons)
                                             {
                                                 //Check suitability
-                                                if (subBtnType.IsAssignableFrom(FlyOutBtnFunc) && !(type.IsAbstract || type.IsInterface) && Activator.CreateInstance(type) is ISwFlyOutButton subBtn)
+                                                if (FlyOutBtnFunc.IsAssignableFrom(subBtnType) && !(type.IsAbstract || type.IsInterface) && Activator.CreateInstance(subBtnType) is ISwFlyOutButton subBtn)
                                                 {
-                                                    SingleBaseCommand btnWrap = new SingleBaseCommand(SolidWorks, subBtn, CmdCounter += 1, newPlugin);
-                                                    ((SingleBaseFlyoutCommand)cmd).SubCommand.Add(btnWrap);
+                                                    SingleBaseFlyoutButtonCommand btnWrap = new SingleBaseFlyoutButtonCommand(SolidWorks, subBtn, CmdCounter += 1, newPlugin, ((SingleBaseFlyoutGroup)cmd));
+                                                    ((SingleBaseFlyoutGroup)cmd).SubCommand.Add(btnWrap);
                                                 }
                                             }
                                         }
@@ -307,7 +306,7 @@ namespace SingularityCore
                                 }
                                 catch (Exception ex) { Logger.Error(ex); }
 
-                                break;
+                                
                             }
                         }
                         if (newPlugin.Functions.Any()) found.Add(newPlugin);
@@ -324,7 +323,7 @@ namespace SingularityCore
                 Logger.Error(ex);
                 return found;
             }
-        }
+         }
         /// <summary>
         /// Gets all directories where this DLLS is in search for more modules to load
         /// </summary>
@@ -353,6 +352,7 @@ namespace SingularityCore
         /// <param name="dirPath">The dirpath.</param>
         private void SearchThisDir(ref Dictionary<string, FileInfo> dlls, DirectoryInfo dirPath)
         {
+            if (!dirPath.Exists) return;
             try
             {
                 FileInfo[] files = dirPath.GetFiles("*.dll");

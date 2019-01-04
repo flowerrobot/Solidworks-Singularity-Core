@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 
@@ -17,9 +18,9 @@ namespace SingularityCore.UI
 
         #region Image Path
         /// <inheritdoc />
-        public string ImagePathSize20 { get; private set; }
+        public string ImagePathSize20 { get; }
         /// <inheritdoc />
-        public string ImagePathSize32 { get; private set; }
+        public string ImagePathSize32 { get; }
         /// <inheritdoc />
         public string ImagePathSize40 { get; }
         /// <inheritdoc />
@@ -29,7 +30,7 @@ namespace SingularityCore.UI
         /// <inheritdoc />
         public string ImagePathSize128 { get; }
 
-        public string[] CmdImagePaths => new[]{ImagePathSize20, ImagePathSize32, ImagePathSize40, ImagePathSize64, ImagePathSize96, ImagePathSize128};
+        public string[] CmdImagePaths => new[] { ImagePathSize20, ImagePathSize32, ImagePathSize40, ImagePathSize64, ImagePathSize96, ImagePathSize128 };
         #endregion
 
         #region Addin Icon
@@ -51,7 +52,7 @@ namespace SingularityCore.UI
         /// <inheritdoc />
         public string AddinIconSize128 { get; }
 
-        public string[] AddinIconPaths => new[] {AddinIconSize20, AddinIconSize32, AddinIconSize40, AddinIconSize64, AddinIconSize96, AddinIconSize128};
+        public string[] AddinIconPaths => new[] { AddinIconSize20, AddinIconSize32, AddinIconSize40, AddinIconSize64, AddinIconSize96, AddinIconSize128 };
         #endregion
 
         #region Default Images
@@ -73,23 +74,50 @@ namespace SingularityCore.UI
         public List<ISingleCommandDef> Images { get; } = new List<ISingleCommandDef>();
 
         private const string IconName = "SingularityAddin";
+        private const string AddInIconName = "SingularityIcon";
         internal IconManager()
         {
-            ImagePathSize20 = Path.Combine(Dir, IconName+ "20" + ext);
-            ImagePathSize32 = Path.Combine(Dir, IconName+ "32" + ext);
-            ImagePathSize40 = Path.Combine(Dir, IconName+ "40" + ext);
-            ImagePathSize64 = Path.Combine(Dir, IconName+ "64" + ext);
-            ImagePathSize96 = Path.Combine(Dir, IconName+ "96" + ext);
-            ImagePathSize128 = Path.Combine(Dir, IconName+ "128" + ext);
-            
+            try
+            {
+                if (!Directory.Exists(Dir))
+                {
+                    Directory.CreateDirectory(Dir);
+                    if (!Directory.Exists(Dir)) { Logger.Error("Can not create working directory"); }
+                }
+                ImagePathSize20 = Path.Combine(Dir, IconName + "20" + ext);
+                ImagePathSize32 = Path.Combine(Dir, IconName + "32" + ext);
+                ImagePathSize40 = Path.Combine(Dir, IconName + "40" + ext);
+                ImagePathSize64 = Path.Combine(Dir, IconName + "64" + ext);
+                ImagePathSize96 = Path.Combine(Dir, IconName + "96" + ext);
+                ImagePathSize128 = Path.Combine(Dir, IconName + "128" + ext);
+
+                //Addin icon
+                AddinIconSize20 = Path.Combine(Dir, AddInIconName + 20 + ext);
+                AddinIconSize32 = Path.Combine(Dir, AddInIconName + 32 + ext);
+                AddinIconSize40 = Path.Combine(Dir, AddInIconName + 40 + ext);
+                AddinIconSize64 = Path.Combine(Dir, AddInIconName + 64 + ext);
+                AddinIconSize96 = Path.Combine(Dir, AddInIconName + 96 + ext);
+                AddinIconSize128 = Path.Combine(Dir, AddInIconName + 128 + ext);
+
+                //Extract icons
+                Properties.Resources.Singularity_20.Save(AddinIconSize20, ImageFormat.Bmp);
+                Properties.Resources.Singularity_32.Save(AddinIconSize32, ImageFormat.Bmp);
+                Properties.Resources.Singularity_40.Save(AddinIconSize40, ImageFormat.Bmp);
+                Properties.Resources.Singularity_64.Save(AddinIconSize64, ImageFormat.Bmp);
+                Properties.Resources.Singularity_96.Save(AddinIconSize96, ImageFormat.Bmp);
+                Properties.Resources.Singularity_128.Save(AddinIconSize128, ImageFormat.Bmp);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Error creating icons");
+            }
+
 
             Logger.Trace("Large image {0}", ImagePathSize32);
 
 
         }
 
-        private const int largeSize = 24;
-        private const int smallSize = 16;
 
         private const string ext = ".bmp";
         //http://www.iconarchive.com/show/concave-icons-by-gakuseisean/Black-Internet-icon.html
@@ -103,9 +131,9 @@ namespace SingularityCore.UI
 
                 //Merge images together side by side by both image sizes
 
-                int[] sizes = new[] {20, 32, 40, 64, 96, 128};
-                Bitmap[] bm = new Bitmap[sizes.Length-1];
-                Graphics[] gra = new Graphics[sizes.Length-1];
+                int[] sizes = new[] { 20, 32, 40, 64, 96, 128 };
+                Bitmap[] bm = new Bitmap[sizes.Length];
+                Graphics[] gra = new Graphics[sizes.Length];
 
                 try
                 {
@@ -124,7 +152,7 @@ namespace SingularityCore.UI
                         {
                             if (cmd.Command is ISwCommand swCmd)
                             {
-                                IIconDef img = swCmd.Icons;
+                                IIconDef img = swCmd.Icons ?? new IconDef(swCmd);
 
                                 ((SingleBaseCommand)cmd).IconIndex = count;
                                 Bitmap[] iconBm = new[]
@@ -140,26 +168,27 @@ namespace SingularityCore.UI
                                 }
                             }
 
-                            count += 1;
+                            
                         }
                         catch (Exception ex)
                         {
                             Logger.Error(ex, "ID :{0}", cmd.Id);
                         }
+                        count += 1;
                     }
                 }
                 finally
                 {
                     for (int i = 0; i < sizes.Length; i++)
                     {
-                        gra[i].Dispose();
+                        gra[i]?.Dispose();
                         gra[i] = null;
                     }
                 }
 
                 for (int i = 0; i < sizes.Length; i++)
-                   bm[i].Save(CmdImagePaths[i]);
-                
+                    bm[i].Save(CmdImagePaths[i]);
+
 
                 return true;
             }

@@ -1,9 +1,5 @@
-﻿using SingleCore.Interfaces;
-using SingleCore.UI;
-using SingularityBase;
+﻿using SingularityBase;
 using SingularityBase.UI;
-using SingularityBase.UI.Commands;
-using SingularityBase.UI.Ribbon;
 using SingularityCore.UI;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
@@ -23,19 +19,13 @@ namespace SingularityCore
         internal IconManager Icons { get; } = new IconManager();
         internal CommandManager CmdMgr => Solidworks.CommandManager;
 
-
         public static NLog.Logger Logger { get; } = NLog.LogManager.GetLogger("CommandMgr");
         public static string DefaultRibbonName = "Singularity";
         public static string DefaultRibbonTabName = "Tab1";
 
-        private readonly List<ICommandGroup> CreatedCmdGrps = new List<ICommandGroup>();
-        private readonly List<ICommandGroup> cmdgrps = new List<ICommandGroup>();
-
-        private int cmdGrpCount;
-
-        private Dictionary<int, ISingleCommandDef> AllCustomFunctions { get; } = new Dictionary<int, ISingleCommandDef>();
-        private Dictionary<int, ISingleCommandDef> AllCommands { get; } = new Dictionary<int, ISingleCommandDef>();
-        private Dictionary<int, SingleBaseFlyoutCommand> AllFlyOuts { get; } = new Dictionary<int, SingleBaseFlyoutCommand>();
+        private Dictionary<int, SingleBaseCustomCommand> AllCustomFunctions { get; } = new Dictionary<int, SingleBaseCustomCommand>();
+        private Dictionary<int, SingleBaseCommand> AllCommands { get; } = new Dictionary<int, SingleBaseCommand>();
+        private Dictionary<int, SingleBaseFlyoutGroup> AllFlyOuts { get; } = new Dictionary<int, SingleBaseFlyoutGroup>();
 
         /// <summary>
         /// List of all high level Ribbons
@@ -68,11 +58,19 @@ namespace SingularityCore
         {
             try
             {
-                //Raise command
-                Logger.Trace("Command call back {0}", commandIndex);
-                if (AllCommands.ContainsKey(commandIndex))
-                    (AllCommands[commandIndex].Command as ISwCommand)?.ActionCallback();
-                else { Logger.Trace("key not found {0}", commandIndex); }
+                //Ensure its out command
+                if (!AllCommands.ContainsKey(commandIndex)) return;
+
+                SingleBaseCommand cmd = AllCommands[commandIndex];
+
+                //if flyout create the icons again.
+                if (cmd.CmdType == CommandType.FlyOut)
+                    //LoadFlyoutSubmenu(cmd.Id);
+
+
+                    //Raise command
+                    Logger.Trace("Command call back {0}", commandIndex);
+                (cmd.Command as ISwCommand)?.ActionCallback();
             }
             catch (Exception ex) { Logger.Error(ex); }
         }
@@ -81,14 +79,20 @@ namespace SingularityCore
             try
             {
                 Logger.Trace("display state {0}", commandIndex);
+
+                //Ensure its out command
+                if (!AllCommands.ContainsKey(commandIndex)) return (int)IconEnabled.Deselect_Enable;
                 try
                 {
-                    if (AllCommands.ContainsKey(commandIndex))
+                    SingleBaseCommand cmd = AllCommands[commandIndex];
+                    if (cmd.CmdType == CommandType.FlyOut) //if its a flyout check if any of the sub commands are enabled.
                     {
-                        IconEnabled asa = (AllCommands[commandIndex].Command as ISwCommand)?.IconState ?? IconEnabled.Deselect_Enable;
-                        return (int)asa;
+                        if (((SingleBaseFlyoutGroup)cmd).SubCommand.Any(t => t.Command.IconState == IconEnabled.Deselect_Enable))
+                            return (int)IconEnabled.Deselect_Enable;
                     }
+                    return (int)((cmd.Command as ISwCommand)?.IconState ?? IconEnabled.Deselect_Enable);
                 }
+
                 catch (Exception ex) { Logger.Error(ex, "display state {0}", commandIndex); }
 
                 return (int)IconEnabled.Deselect_Disable;
@@ -102,7 +106,7 @@ namespace SingularityCore
         /// Will load all plugins, create the icons pack & implement commands
         /// </summary>
         /// <returns></returns>
-        public bool LoadPlugins()
+        private bool LoadPlugins()
         {
             try
             {
@@ -112,7 +116,7 @@ namespace SingularityCore
                 //Sort functions in plugin into groups.
                 foreach (DefinedPlugin plugin in PluginLoader.Plugins)
                 {
-                    foreach (ISingleCommandDef cmd in plugin.Functions)
+                    foreach (SingleBaseCommand cmd in plugin.Functions)
                     {
                         switch (cmd.CmdType)
                         {
@@ -121,20 +125,25 @@ namespace SingularityCore
                                 break;
                             case CommandType.FlyOut:
                                 AllCommands.Add(cmd.Id, cmd); //add it to the general population for easy searching
-                                AllFlyOuts.Add(cmd.Id, (SingleBaseFlyoutCommand)cmd);
-                                foreach (SingleBaseFlyoutButtonCommand swFlyOutButton in ((SingleBaseFlyoutCommand)cmd).SubCommand)
+                                AllFlyOuts.Add(cmd.Id, (SingleBaseFlyoutGroup)cmd);
+                                foreach (SingleBaseFlyoutButtonCommand swFlyOutButton in ((SingleBaseFlyoutGroup)cmd).SubCommand)
                                 {
                                     AllCommands.Add(swFlyOutButton.Id, swFlyOutButton);
                                 }
                                 break;
                             case CommandType.Custom:
-                                AllCustomFunctions.Add(cmd.Id, cmd);
+                                AllCustomFunctions.Add(cmd.Id, (SingleBaseCustomCommand)cmd);
                                 break;
                         }
                     }
                 }
 
-                if (PluginLoader.Plugins.Count <= 0) return false;
+                if (PluginLoader.Plugins.Count <= 0)
+                {
+                    Logger.Error("No commands found to implement");
+                    return false;
+
+                }
 
                 try
                 {
@@ -157,23 +166,26 @@ namespace SingularityCore
             foreach (SingleBaseCommand cmd in AllCommands.Values)
             {
                 //Put commands into Ribbon
-                if (cmd.CmdType != CommandType.FlyoutSubButton)
+                if (cmd.CmdType != CommandType.FlyoutSubButton) //We don't put sub btn's onto menu or ribbon as this is done in sub code.
                 {
                     //Check defaults
-                    if (string.IsNullOrWhiteSpace(((ISwRibbon)cmd.Command).RibbonTabName))
-                        ((ISwRibbon)cmd.Command).RibbonTabName = DefaultRibbonName;
+                    string RibName = ((ISwRibbon)cmd.Command).RibbonTabName;
+                    string SubRib = ((ISwRibbon)cmd.Command).RibbonSubTabName;
 
-                    if (string.IsNullOrWhiteSpace(((ISwRibbon)cmd.Command).RibbonSubTabName))
-                        ((ISwRibbon)cmd.Command).RibbonSubTabName = DefaultRibbonTabName;
+                    if (string.IsNullOrWhiteSpace(RibName))
+                        RibName = DefaultRibbonName;
 
-                    IRibbonCollection rib = GetRibbonByName(((ISwRibbon)cmd.Command).RibbonTabName);
-                    RibbonGroupCollection subRib = (RibbonGroupCollection)rib.GetTabByName(((ISwRibbon)cmd.Command).RibbonSubTabName);
+                    if (string.IsNullOrWhiteSpace(SubRib))
+                        SubRib = DefaultRibbonTabName;
+
+                    RibbonCollection rib = GetRibbonByName(RibName);
+                    RibbonGroupCollection subRib = (RibbonGroupCollection)rib.GetTabByName(SubRib);
 
                     subRib.AddButtonOrFlyOut(cmd);
-                }
 
-                //Put commands into menu
-                ValidateForMenu(cmd);
+                    //Put commands into menu
+                    ValidateForMenu(cmd);
+                }
             }
 
             // *** Create Menu
@@ -184,25 +196,25 @@ namespace SingularityCore
 
 
             // *** Create flyout commands
-            foreach (SingleBaseFlyoutCommand cmd in AllFlyOuts.Values)
+            foreach (SingleBaseFlyoutGroup cmd in AllFlyOuts.Values)
             {
 
                 Logger.Trace("Trying to create a flyout but this is not supported");
                 cmd.FlyGroup = CmdMgr.CreateFlyoutGroup2(cmd.Id, cmd.Command.CommandName, cmd.Command.CommandName, ((ISwCommand)cmd.Command).CommandToolTop,
-                    (object)Icons.AddinIconPaths,
-                    (object)Icons.CmdImagePaths,
-                   $"CommandCallBack({cmd.Id})", $"DisplayStatus({cmd.Id})");
+                    (object)Icons.AddinIconPaths, (object)Icons.CmdImagePaths, $"CommandCallBack({cmd.Id})", $"DisplayStatus({cmd.Id})");
                 cmd.ButtonId = cmd.FlyGroup.CmdID;
                 //Call this like this, as call backs will do it too.
                 LoadFlyoutSubmenu(cmd.Id);
             }
+
+
 
             Logger.Trace("Start creating the ribbions");
             //*** for each type document start creating ribbons and inserting commands
 
             foreach (swDocumentTypes_e docType in new[] { swDocumentTypes_e.swDocASSEMBLY, swDocumentTypes_e.swDocDRAWING, swDocumentTypes_e.swDocPART })
             {
-                //Got through each ribbon
+                //Go through each ribbon
                 foreach (RibbonCollection rib in Ribbons)
                 {
 
@@ -230,10 +242,14 @@ namespace SingularityCore
                         foreach (IRibbonGroupCollection rtab in rib.SubRibbons)
                         {
                             Dictionary<int, int> cmds = new Dictionary<int, int>(); //id and ribbon type
-
+                                                                                    //
                             Logger.Trace("Adding commands to group");
                             foreach (ISingleCommandDef cmd in ((RibbonGroupCollection)rtab).RibbonCommands.Values)
-                                cmds.Add(cmd.ButtonId, (int)((ISwRibbon)cmd.Command).RibbonDisplayType);
+                            {
+                                if (((ISwRibbon)cmd.Command).DocumentTypes.DocumentsEqual(docType)) //Ensure its suitable for the document
+                                    if (((ISwMenu)cmd.Command).MenuType.HasFlag(CommandLocation.Ribbon)) //Ensure it was flagged to go onto the ribbon
+                                        cmds.Add(cmd.ButtonId, (int)((ISwRibbon)cmd.Command).RibbonDisplayType);
+                            }
 
                             CommandTabBox cmdBox = rib.CommandTab.AddCommandTabBox();
 
@@ -260,10 +276,7 @@ namespace SingularityCore
 
         }
 
-        public void CreateMenu()
-        {
 
-        }
         /// <summary>
         /// Grabs the Icons from each command to compile into a list.
         /// </summary>
@@ -279,20 +292,20 @@ namespace SingularityCore
         /// </summary>
         /// <param name="flyOutId">Button allocated by Singularity</param>
         /// <param name="buttonId">Button allocated by Solidworks</param>
-        private void LoadFlyoutSubmenu(int flyOutId = -1, int buttonId = -1)
+        private void LoadFlyoutSubmenu(int flyOutId)
         {
             try
             {
 
-                SingleBaseFlyoutCommand flyParent = null;
-                if (flyOutId != -1)
-                    flyParent = AllFlyOuts[flyOutId];
-                else if (buttonId != -1)
-                    flyParent = AllFlyOuts.FirstOrDefault(x => x.Value.ButtonId == buttonId).Value;
+                SingleBaseFlyoutGroup flyParent = AllFlyOuts[flyOutId];
+                //if (flyOutId != -1)
+                //    flyParent = AllFlyOuts[flyOutId];
+                //else if (buttonId != -1)
+                //    flyParent = AllFlyOuts.FirstOrDefault(x => x.Value.ButtonId == buttonId).Value;
 
                 if (flyParent == null) return;
 
-                FlyoutGroup flyGroup = flyParent.FlyGroup;//_cmdMgr.GetFlyoutGroup(flyParent.Id); //user ID,not sw id
+                IFlyoutGroup flyGroup = flyParent.FlyGroup;//_cmdMgr.GetFlyoutGroup(flyParent.Id); //user ID,not sw id
                 flyGroup.RemoveAllCommandItems();
 
                 foreach (SingleBaseFlyoutButtonCommand subBtn in flyParent.SubCommand)
@@ -311,7 +324,7 @@ namespace SingularityCore
         /// </summary>
         /// <param name="Name">Name of the command group required</param>
         /// <returns></returns>
-       
+
 
 
         /// <summary>
@@ -332,23 +345,24 @@ namespace SingularityCore
             Ribbons.Add(res);
             return res;
         }
-        
+
 
         private MenuCollection ValidateForMenu(SingleBaseCommand cmd)
         {
             ISwMenu menu = (ISwMenu)cmd.Command;
-            if (string.IsNullOrEmpty(menu.MenuName))
-                menu.MenuName = DefaultRibbonName;
+            string menuName = menu.MenuName;
+            if (string.IsNullOrEmpty(menuName))
+                menuName = DefaultRibbonName;
 
 
-            string[] path = menu.MenuName.Split('\\');
+            string[] path = menuName.Split('\\');
 
             //Get or create the high level menu
             MenuCollection men;
             if (!Menus.ContainsKey(path[0]))
             {
                 men = new MenuCollection(this, path[0]);
-                Menus.Add(menu.MenuName, men);
+                Menus.Add(menuName, men);
             }
             else
             {
@@ -358,7 +372,7 @@ namespace SingularityCore
             for (int i = 1; i < path.Length; i++)
                 men = men.AddOrGetMenu(path[i]);
 
-            men._commands.Add(cmd.Id,cmd);
+            men._commands.Add(cmd.Id, cmd);
 
             return men;
         }
@@ -367,6 +381,8 @@ namespace SingularityCore
         {
             Ribbons.ForEach(t => t.Dispose());
             Ribbons.Clear();
+
+            //Menus.Values.ForEach(t => t.Dispose());
             //DisconnectFromSw();
         }
 

@@ -28,7 +28,7 @@ namespace SingularityCore
         /// <summary>
         /// Command function
         /// </summary>
-        public List<ISingleCommandDef> Functions { get; } = new List<ISingleCommandDef>();
+        public List<SingleBaseCommand> Functions { get; } = new List<SingleBaseCommand>();
 
         /// <summary>
         /// Version of the assembly

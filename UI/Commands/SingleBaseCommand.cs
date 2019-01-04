@@ -47,12 +47,24 @@ namespace SingularityCore.UI
         /// <inheritdoc />
         public CommandType CmdType { get; internal set; }
 
+        /// <inheritdoc />
+        public bool MenuImplemented { get; internal set; }
+
+
+        /// <summary>
+        /// Link the plugin, the origin of the file
+        /// </summary>
         internal DefinedPlugin Plugin { get; }
 
         /// <summary>
         /// This is the index to the icons
         /// </summary>
         internal int IconIndex { get;  set; }
+
+        /// <summary>
+        /// This is the menu order that is given by Solidworks. Compared to the one requested by the user.
+        /// </summary>
+        internal int MenuOrder { get; set; }
 
 
     }

@@ -5,9 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using SingleCore;
-using SingleCore.UI;
-using SingularityBase.UI.Ribbon;
 
 namespace SingularityCore
 {

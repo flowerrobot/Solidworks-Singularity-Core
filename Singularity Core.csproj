@@ -97,7 +97,7 @@
     <Compile Include="UI\Ribbon\RibbionCollection.cs" />
     <Compile Include="UI\Ribbon\RibbionGroupCollection.cs" />
     <Compile Include="UI\Commands\SingleBaseCommand.cs" />
-    <Compile Include="UI\Commands\SingleBaseFlyoutCommand.cs" />
+    <Compile Include="UI\Commands\SingleBaseFlyoutGroup.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Singularity Base\Singularity Base.csproj">

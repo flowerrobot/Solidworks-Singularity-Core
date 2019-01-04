@@ -2,14 +2,13 @@
 using SingularityBase;
 using SingularityBase.UI;
 using System.Collections.Generic;
-using SingularityBase.UI.Commands;
 using SolidWorks.Interop.sldworks;
 
 namespace SingularityCore.UI
 {
-    internal class SingleBaseFlyoutCommand :SingleBaseCommand, ISingleCommandDef , IDisposable
+    internal class SingleBaseFlyoutGroup :SingleBaseCommand, ISingleCommandDef , IDisposable
     {
-        public SingleBaseFlyoutCommand(ISingleSldWorks solidworks, ISwFlyOut command, int id, DefinedPlugin plugin) : base(solidworks, command, id,plugin)
+        public SingleBaseFlyoutGroup(ISingleSldWorks solidworks, ISwFlyOut command, int id, DefinedPlugin plugin) : base(solidworks, command, id,plugin)
         {
             CmdType = CommandType.FlyOut;
             Command = command;
@@ -24,7 +23,7 @@ namespace SingularityCore.UI
         /// </summary>
         public List<SingleBaseFlyoutButtonCommand> SubCommand { get; } = new List<SingleBaseFlyoutButtonCommand>();
 
-         public FlyoutGroup FlyGroup { get; set; }
+         public IFlyoutGroup  FlyGroup { get; set; }
 
          public void Dispose()
          {

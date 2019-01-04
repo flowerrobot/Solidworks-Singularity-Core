@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using SingularityBase;
-using SingularityBase.UI.Commands;
+using SingularityBase.UI;
 
 namespace SingularityCore.UI
 {
@@ -14,7 +14,7 @@ namespace SingularityCore.UI
             CmdType = CommandType.Custom;
             
             //Update variables in interface are updates, now init it
-            ((ISwCustomFunction)command).Init();
+            ((ISwCustomFunction)command).Init(solidworks);
         }
 
     }

@@ -1,11 +1,9 @@
 ﻿using SingularityBase;
 using SingularityBase.UI;
-using SingularityBase.UI.Ribbon;
 using SolidWorks.Interop.sldworks;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using SingularityBase.UI.Commands;
 
 namespace SingularityCore.UI
 {
@@ -120,16 +118,12 @@ namespace SingularityCore.UI
         //}
         /// <inheritdoc />
         public ReadOnlyCollection<ISingleCommandDef> Commands => RibbonCommands.Values.ToList().AsReadOnly();
-        public ReadOnlyCollection<ISingleCommandDef> MenuCommands => _menuCommands.Values.ToList().AsReadOnly();
 
         internal SortedList<int, ISingleCommandDef> RibbonCommands { get; } = new SortedList<int,ISingleCommandDef>(new CommandSorter<int>());
-        private SortedList<int, ISingleCommandDef> _menuCommands { get; } = new SortedList<int,ISingleCommandDef>(new CommandSorter<int>());
-
 
         internal void AddButtonOrFlyOut(SingleBaseCommand cmd)
         {
             RibbonCommands.Add(((ISwRibbon)cmd.Command).RibbonOrder,cmd);
-            _menuCommands.Add(((ISwMenu)cmd.Command).MenuOrder,cmd);
         }
 
 
