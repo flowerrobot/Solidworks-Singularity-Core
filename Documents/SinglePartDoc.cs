@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using SingularityBase;
 using SingularityBase.Events;
-using SingularityBase.Managers;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using SingularityCore.Managers;
@@ -41,16 +40,22 @@ namespace SingularityCore
             return Configuration(configName)?.CustomPropertyManager ?? null;
         }
 
+        private ISingleCutListManager _CutList;
+        public ISingleCutListManager CutList => _CutList ?? (_CutList = new SingleCutListManager(this));
+        
+
         public ISingleConfiguration Configuration(string name)
         {
             string[] names = (string[])ModelDoc.GetConfigurationNames();
             if (!names.Any(t => t.Equals(name, StringComparison.CurrentCultureIgnoreCase))) return null;
             var con = _configs.FirstOrDefault(t => t.ConfigName.Equals(name, StringComparison.CurrentCultureIgnoreCase));
             if (con != null) return con;
-            con = new SingleConfiguration(ModelDoc.GetConfigurationByName(name));
+            con = new SingleConfiguration(this,ModelDoc.GetConfigurationByName(name));
             _configs.Add(con);
             return con;
-        }        
+        }
+
+        public ISingleConfiguration ActiveConfiguration { get => new SingleConfiguration(this,(IConfiguration)ModelDoc.GetActiveConfiguration()); }
 
         public IEnumerable<ISingleConfiguration> Configurations
         {
@@ -58,7 +63,7 @@ namespace SingularityCore
                 foreach (string name in (string[])ModelDoc.GetConfigurationNames())
                 {
                     if (null == _configs.FirstOrDefault(t => t.ConfigName.Equals(name, StringComparison.CurrentCultureIgnoreCase)))
-                        _configs.Add(new SingleConfiguration(ModelDoc.GetConfigurationByName(name)));
+                        _configs.Add(new SingleConfiguration(this,ModelDoc.GetConfigurationByName(name)));
                 }
                 return _configs.AsReadOnly();
             }

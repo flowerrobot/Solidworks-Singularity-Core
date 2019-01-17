@@ -1,7 +1,5 @@
 ﻿using SingularityBase;
 using SingularityBase.Events;
-using SingularityBase.Managers;
-using SingularityCore;
 using SingularityCore.Managers;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
@@ -33,36 +31,42 @@ namespace SingularityCore
             return docProp;
         }
 
+
+        private ISingleFeatureManagers _featureManager;
+        public ISingleFeatureManagers FeatureManager => _featureManager ?? (_featureManager = new SingleFeatureManager(this));
+
+
+        private ISingleSelectionManager _selectionManager;
+        public ISingleSelectionManager SelectionManager =>_selectionManager ?? (_selectionManager = new SingleSelectionManager(ModelDoc.SelectionManager));
+
+
         public ISingleSldWorks SldWorks => SingleSldWorks.GetSolidworks;
+        //public ISingleFeature GetFirstFeature => new SingleFeature(this,ModelDoc.FirstFeature());
+        //public ISingleFeature GetNextFeature(ISingleFeature next) => next.GetNextFeature;
+        //public IEnumerable<ISingleFeature> GetFeatures
+        //{
+        //    get {
+        //        List<ISingleFeature> lst = new List<ISingleFeature>();
+        //        ISingleFeature feat = GetFirstFeature;
+        //        while (feat != null)
+        //        {
+        //            lst.Add(feat);
+        //            feat = feat.GetNextFeature;
+        //        }
+        //        return lst;
+        //    }
+        //}
 
-        public IFeature GetFirstFeature => ModelDoc.FirstFeature();
 
-        public IEnumerable<IFeature> GetFeatures
-        {
-            get {
-                List<IFeature> lst = new List<IFeature>();
-                var feat = GetFirstFeature;
-                while(feat != null)
-                {
-                    lst.Add(feat);
-                    feat = feat.GetNextFeature();
-                }
-                return lst;
-            }
-        }
 
         public ISingleModelView ActiveView => new SingleModelView(this);
 
-
-        public IFeature GetNextFeature(IFeature next)
-        {
-            return next.GetNextFeature();
-        }
 
         public void ClearSelection()
         {
             ModelDoc.ClearSelection2(true);
         }
+
 
         public bool EditUnsuppress(IEnumerable<IFeature> features)
         {
@@ -73,8 +77,7 @@ namespace SingularityCore
             }
             return ModelDoc.EditUnsuppress2();
         }
-
-        public bool EditSuppress(IEnumerable<IFeature> features)
+        public bool EditSuppress(IEnumerable<ISingleFeature> features)
         {
             ClearSelection();
             foreach (IFeature fea in features)
@@ -83,11 +86,38 @@ namespace SingularityCore
             }
             return ModelDoc.EditSuppress2();
         }
-
-        public bool ForceRebuild(bool TopOnly)
+        public bool EditUnsuppress(IEnumerable<ISingleFeature> features)
         {
-            return ModelDoc.ForceRebuild3(TopOnly);
+            ClearSelection();
+            foreach (ISingleFeature fea in features)
+                fea.Select(true, -1);
+            return ModelDoc.EditUnsuppress2();
         }
+        public bool EditSuppress(IEnumerable<IFeature> features)
+        {
+            ClearSelection();
+            foreach (ISingleFeature fea in features)
+                fea.Select(true, -1);
+            return ModelDoc.EditSuppress2();
+        }
+        public bool EditUnsuppress() => ModelDoc.EditUnsuppress2();
+        public bool EditSuppress() => ModelDoc.EditSuppress2();
+
+
+
+        public bool ForceRebuild(bool TopOnly)  => ModelDoc.ForceRebuild3(TopOnly);
+
+        public swActivateDocError_e ActivateDoc(bool useUserPreferences = true, swRebuildOnActivation_e option = swRebuildOnActivation_e.swDontRebuildActiveDoc)
+        {
+            return SldWorks.ActivateDoc(this, useUserPreferences, option);
+        }
+
+        public string FileName => System.IO.Path.GetFileName(ModelDoc.GetPathName());
+        public string FullFileName => ModelDoc.GetPathName();
+        public string FileDirectory => System.IO.Path.GetDirectoryName(ModelDoc.GetPathName());
+
+        private ITableManager _tableMgr;
+        public ITableManager Tables => _tableMgr ?? (_tableMgr = new TableManager(this));
 
         #region Events
 

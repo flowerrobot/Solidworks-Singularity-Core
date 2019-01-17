@@ -1,5 +1,6 @@
 ﻿using SingularityBase;
 using SingularityBase.UI;
+using SingularityCore.Events;
 using SingularityCore.UI;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
@@ -56,6 +57,7 @@ namespace SingularityCore
         #region UI Callbacks
         public void CommandCallBack(int commandIndex)
         {
+            UserEvent ev = null;
             try
             {
                 //Ensure its out command
@@ -70,12 +72,20 @@ namespace SingularityCore
 
                     //Raise command
                     Logger.Trace("Command call back {0}", commandIndex);
+                ev = new UserEvent(cmd.Plugin, EventType.AddinButton, cmd);
+
                 (cmd.Command as ISwCommand)?.ActionCallback();
             }
             catch (Exception ex) { Logger.Error(ex); }
+            finally
+            {
+                ev?.Dispose();
+                ev = null;
+            }
         }
         public int DisplayStatus(int commandIndex)
         {
+            UserEvent ev = null;
             try
             {
                 Logger.Trace("display state {0}", commandIndex);
@@ -85,6 +95,7 @@ namespace SingularityCore
                 try
                 {
                     SingleBaseCommand cmd = AllCommands[commandIndex];
+                    ev = new UserEvent(cmd.Plugin, EventType.AddinIconState, cmd);
                     if (cmd.CmdType == CommandType.FlyOut) //if its a flyout check if any of the sub commands are enabled.
                     {
                         if (((SingleBaseFlyoutGroup)cmd).SubCommand.Any(t => t.Command.IconState == IconEnabled.Deselect_Enable))
@@ -98,6 +109,11 @@ namespace SingularityCore
                 return (int)IconEnabled.Deselect_Disable;
             }
             catch (Exception ex) { Logger.Error(ex); }
+            finally
+            {
+                ev?.Dispose();
+                ev = null;
+            }
             return (int)IconEnabled.Deselect_Enable;
         }
         #endregion

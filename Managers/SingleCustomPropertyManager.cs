@@ -1,5 +1,4 @@
 ﻿using SingularityBase;
-using SingularityBase.Managers;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using System;

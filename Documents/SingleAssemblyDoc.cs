@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using SingularityBase;
 using SingularityBase.Events;
-using SingularityBase.Managers;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using SingularityCore.Managers;
@@ -45,10 +44,13 @@ namespace SingularityCore
             if (!names.Any(t => t.Equals(name, StringComparison.CurrentCultureIgnoreCase))) return null;
             var con = _configs.FirstOrDefault(t => t.ConfigName.Equals(name, StringComparison.CurrentCultureIgnoreCase));
             if (con != null) return con;
-            con = new SingleConfiguration(((ModelDoc2)Document).GetConfigurationByName(name));
+            con = new SingleConfiguration(this,((ModelDoc2)Document).GetConfigurationByName(name));
             _configs.Add(con);
             return con;
         }
+
+        public bool IsInContextEditState { get; }
+        public bool InContextEditDocument { get; }
 
         public IEnumerable<ISingleConfiguration> Configurations
         {
@@ -56,7 +58,7 @@ namespace SingularityCore
                 foreach (string name in (string[])((ModelDoc2)Document).GetConfigurationNames())
                 {
                     if (null == _configs.FirstOrDefault(t => t.ConfigName.Equals(name, StringComparison.CurrentCultureIgnoreCase)))
-                        _configs.Add(new SingleConfiguration(((ModelDoc2)Document).GetConfigurationByName(name)));
+                        _configs.Add(new SingleConfiguration(this,((ModelDoc2)Document).GetConfigurationByName(name)));
                 }
                 return _configs.AsReadOnly();
             }

@@ -1,39 +1,63 @@
-﻿using SingularityBase.Managers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using SingularityBase;
+using SingularityCore.Managers;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 
-namespace SingularityCore.Managers
+namespace SingularityCore
 {
-    //TODO finish implementation
+   
     internal class SingleCutListFolder : ISingleCutListFolder
     {
-        public SingleCutListFolder(ISinglePartDoc doc, IFeature feat)
+        public SingleCutListFolder(ISingleModelDoc doc, ISingleFeature feat)
         {
             Document = doc;
-            Feature = feat;            
+            Feature = feat;
+        }
+        public SingleCutListFolder(ISingleModelDoc doc, IFeature feat)
+        {
+            Document = doc;
+            Feature = new SingleFeature(Document, feat);            
         }
         public string Name => Feature.Name;
+        public ISingleFeature Feature { get; }
+        public ISingleModelDoc Document { get; }
 
-        public IFeature Feature { get; }
-        public ISinglePartDoc Document { get; }
+
+        public int GetBodyCount => CutFolder.GetBodyCount();
 
         [Obsolete("By Product on inheritance")]
         public ISingleConfiguration Configuration => throw new NotImplementedException();
 
-        public ICustomPropertyManager CustomPropertyManager => Feature.CustomPropertyManager;
+        
 
-        public IBodyFolder[] GetBodies => CutFolder.GetBodies();
+        public IEnumerable<ISingleBody> GetBodies => (ISingleBody[])CutFolder.GetBodies();
 
-        public swCutListType_e Type => (swCutListType_e)CutFolder.GetCutListType();
+        public swBodyFolderFeatureType_e Type => (swBodyFolderFeatureType_e) CutFolder.Type;
+        public swCutListType_e CutListType => (swCutListType_e)CutFolder.GetCutListType();
 
-        public BodyFolder CutFolder => Feature.GetSpecificFeature2();
+        public bool AutomaticCutList { get=> CutFolder.GetAutomaticCutList(); set=> CutFolder.SetAutomaticCutList(value); }
+        public bool AutomaticUpdate { get => CutFolder.GetAutomaticUpdate(); set=> CutFolder.SetAutomaticCutList(value); }
+        public bool UpdateCutList() => CutFolder.UpdateCutList();
+        
 
-        ISingleModelDoc ISingleCustomPropertyManager.Document => throw new NotImplementedException();
+        public IBodyFolder CutFolder => Feature.Feature.GetSpecificFeature2();
+
+        ISingleModelDoc ISingleCustomPropertyManager.Document => Document;
+
+        public override string ToString() => Name + " " + Type.ToString() + " " + CutListType.ToString();
+
+        
+
+
+        #region CustomProperties
+
+        public ICustomPropertyManager CustomPropertyManager => Feature.Feature.CustomPropertyManager;
+
+        
 
         public swCustomInfoAddResult_e Add(string Name, swCustomInfoType_e Type, string Value, int OverwriteExisting)
         {
@@ -78,5 +102,7 @@ namespace SingularityCore.Managers
         {
             return (swCustomInfoSetResult_e)CustomPropertyManager.Set2(Name, Value);
         }
+
+        #endregion
     }
 }

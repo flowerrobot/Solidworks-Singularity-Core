@@ -14,6 +14,10 @@ namespace SingularityCore
 
 
         public  DrawingDoc Document { get; }
+        public ISingleView GetFirstView => new SingleView(this, Document.GetFirstView());
+        public ISingleView GetNextView(ISingleView view) => view.GetNextView;
+        
+
         public override swDocumentTypes_e Type => swDocumentTypes_e.swDocDRAWING;
 
         internal SingleDrawingDoc(DrawingDoc doc) : base((ModelDoc2)doc)

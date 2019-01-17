@@ -63,6 +63,26 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Events\DocumentEvent.cs" />
+    <Compile Include="Events\EventManager.cs" />
+    <Compile Include="Events\MissingDocumentEvent.cs" />
+    <Compile Include="Managers\SingleFeatureManager.cs" />
+    <Compile Include="Managers\SingleSelectionManager.cs" />
+    <Compile Include="Objects\SingleBody.cs" />
+    <Compile Include="Objects\SingleAnnotation.cs" />
+    <Compile Include="Objects\SingleAnnotationView.cs" />
+    <Compile Include="Objects\SingleComponent.cs" />
+    <Compile Include="Objects\SingleDrawingComponent.cs" />
+    <Compile Include="Objects\SingleView.cs" />
+    <Compile Include="Objects\Tables\old\SingleBomTableAnnotation.cs" />
+    <Compile Include="Objects\Tables\SingleGenericTable.cs" />
+    <Compile Include="Objects\Tables\SingleWeldmentCutListTable.cs" />
+    <Compile Include="Objects\Tables\TableManager.cs" />
+    <Compile Include="Objects\SingleFeature.cs" />
+    <Compile Include="Objects\Tables\SingleBomTable.cs" />
+    <Compile Include="Objects\Tables\SingleGeneralTable.cs" />
+    <Compile Include="Objects\Tables\old\SingleGenericTable.cs" />
+    <Compile Include="Objects\Tables\old\SingleWeldmentCutListTable.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
