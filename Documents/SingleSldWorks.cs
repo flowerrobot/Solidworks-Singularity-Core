@@ -10,16 +10,15 @@ using System.Collections.Generic;
 
 namespace SingularityCore
 {
-    internal class SingleSldWorks : ISingleSldWorks, IDisposable
+    internal class SingleSldWorks :SingularityObject<ISldWorks>, ISingleSldWorks, IDisposable
     {
         private Hashtable AllDocuments { get; } = new Hashtable();
-        public SingleSldWorks(ISldWorks swapp, int addinId)
+        public SingleSldWorks(ISldWorks swapp, int addinId) : base(swapp)
         {
             GetSolidworks = this;
-            Solidworks = swapp;
             AddinId = addinId;
 
-            CommandManager = Solidworks.GetCommandManager(AddinId);
+            CommandManager = new SingularityObject<CommandManager>(Solidworks.GetCommandManager(AddinId)); 
 
 
             #region Define Events
@@ -43,6 +42,7 @@ namespace SingularityCore
             // sld.EndTranslationNotify += Sld_EndTranslationNotify;
             sld.FileCloseNotify += Sld_FileCloseNotify;
             sld.FileNewNotify2 += Sld_FileNewNotify;
+
             sld.FileOpenNotify2 += Sld_FileOpenNotify;
             sld.FileOpenPostNotify += Sld_FileOpenPostNotify;
             sld.FileOpenPreNotify += Sld_FileOpenPreNotify;
@@ -52,25 +52,31 @@ namespace SingularityCore
             #endregion
         }
 
+        
 
 
         public static ISingleSldWorks GetSolidworks { get; private set; }
 
         /// <inheritdoc />
-        public ISldWorks Solidworks { get; private set; }
+        public ISldWorks Solidworks => BaseObject;
 
         /// <inheritdoc />
         public int AddinId { get; }
 
         /// <inheritdoc />
-        public CommandManager CommandManager { get; private set; }
+        public ISingleBaseObject<CommandManager> CommandManager { get; private set; }
+
+        private ISingleMathUtility _mathUtility;
+
+        /// <inheritdoc />
+        public ISingleMathUtility MathUtility => _mathUtility ?? (_mathUtility = new SingleMathUtility());
 
         /// <inheritdoc />
         public ISingleModelDoc ActiveDocument
         {
             get {
                 if (Solidworks.ActiveDoc == null) return null;
-                return ConvertDocument(Solidworks.ActiveDoc);
+                return ConvertDocument((IModelDoc2)Solidworks.ActiveDoc);
             }
             set => ActivateDoc(value, true, 0);
         }
@@ -154,7 +160,7 @@ namespace SingularityCore
 
 
 
-        public void Dispose()
+        public new void Dispose()
         {
             #region Define Events
 
@@ -185,10 +191,8 @@ namespace SingularityCore
             sld.ReferenceNotFoundNotify -= Sld_ReferenceNotFoundNotify;
             #endregion
 
-            System.Runtime.InteropServices.Marshal.ReleaseComObject(CommandManager);
-            CommandManager = null;
-            System.Runtime.InteropServices.Marshal.ReleaseComObject(Solidworks);
-            Solidworks = null;
+            
+           
         }
 
         #region Events
@@ -242,6 +246,8 @@ namespace SingularityCore
             }
             return (int)EventResponse.Okay;
         }
+
+
 
         private int Sld_FileOpenPreNotify(string fileName)
         {

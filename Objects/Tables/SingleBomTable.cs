@@ -8,9 +8,10 @@ namespace SingularityCore
     internal class SingleBomTable : SingleFeature, ISingleBomTable
     {
         public IBomFeature TableFeature { get; private set; }
-        public SingleBomTable(ISingleModelDoc doc, ISingleFeature feat) : base(doc, feat.Feature)
+        public IBomTable Table { get;  }
+        public SingleBomTable(ISingleModelDoc doc, ISingleFeature feat) : base(doc, feat.BaseObject)
         {
-            TableFeature = (IBomFeature)feat.Feature.GetSpecificFeature2();
+            TableFeature = (IBomFeature)feat.BaseObject.GetSpecificFeature2();
         }
 
         public ISingleView View
@@ -20,7 +21,7 @@ namespace SingularityCore
                 if (Document.Type == swDocumentTypes_e.swDocDRAWING)
                 {
                     ISingleDrawingDoc doc = (ISingleDrawingDoc)Document;
-        ISingleView view = doc.GetFirstView;
+                    ISingleView view = doc.GetFirstView;
                     while (view != null)
                     {
                         if (view.GetTableAnnotationCount > 0)
@@ -29,10 +30,10 @@ namespace SingularityCore
                             {
                                 if (tblAnnotation.Type == swTableAnnotationType_e.swTableAnnotation_BillOfMaterials)
                                 {
-                                    if (((ISingleBomTableAnnotation) tblAnnotation).Table.Id == Id)
+                                    if (((ISingleBomTableAnnotation)tblAnnotation).Table.Id == Id)
                                         return view;
                                 }
-}
+                            }
                         }
                         view = view.GetNextView;
                     }
@@ -41,24 +42,47 @@ namespace SingularityCore
             }
         }
 
-        IEnumerable<ISingleBomTable> ISingleBomTable.TableAnnotations => (IEnumerable<ISingleBomTable>)TableAnnotations;
-        public IEnumerable<ISingleTableAnnotation> TableAnnotations
+
+         
+        IList<ISingleTableAnnotation> ISingleTable.TableAnnotations => (IList<ISingleTableAnnotation>)TableAnnotations;
+
+        public IList<ISingleBomTableAnnotation> TableAnnotations
         {
             get {
-                //TODO finish
+                IList<ISingleBomTableAnnotation> anns = new List<ISingleBomTableAnnotation>();
+                foreach (var an in (object[])TableFeature.GetTableAnnotations())
+                {
+                    anns.Add(new SingleBomTableAnnotation(this, (IBomTableAnnotation)an));
+                }
                 //(from bm in (IBomTableAnnotation[])TableFeature.GetTableAnnotations() select new SingleBomTableAnnotation(this, bm)).Cast<ISingleBomTableAnnotation>().ToList();
-                return null;
+                return anns;
             }
         }
-        
 
-        
+
+        //IList<ISingleBomTableAnnotation> ISingleBomTable.TableAnnotations => (IList<ISingleBomTableAnnotation>)TableAnnotations;
+        //public IList<ISingleTableAnnotation> TableAnnotations
+        //{
+        //    get
+        //    {
+        //        IList<ISingleBomTableAnnotation> anns = new List<ISingleBomTableAnnotation>();
+        //        foreach (var an in (object[])TableFeature.GetTableAnnotations())
+        //        {
+        //            anns.Add(new SingleBomTableAnnotation(this, (IBomTableAnnotation)an));
+        //        }
+        //        //(from bm in (IBomTableAnnotation[])TableFeature.GetTableAnnotations() select new SingleBomTableAnnotation(this, bm)).Cast<ISingleBomTableAnnotation>().ToList();
+        //        return anns;
+        //    }
+        //}
+
+
+
 
 
 
         public int GetConfigurationCount(bool onlyVisible) => TableFeature.GetConfigurationCount(onlyVisible);
 
-        public IEnumerable<string> GetConfigurations(bool onlyVisible, out IEnumerable<bool> isVisible)
+        public IList<string> GetConfigurations(bool onlyVisible, out IEnumerable<bool> isVisible)
         {
             object vis = null;
             string[] res = (string[])TableFeature.GetConfigurations(onlyVisible, ref vis);
@@ -99,21 +123,26 @@ namespace SingularityCore
 
     }
 
-    internal class SingleBomTableAnnotation : SingleTableAnnotation, ISingleBomTableAnnotation
+    internal class SingleBomTableAnnotation : SingleTableAnnotation<ISingleBomColumn,ISingleBomRow>, ISingleBomTableAnnotation
     {
-
+        public new ISingleBomTable Table => (ISingleBomTable)base.Table;
         public new IBomTableAnnotation TableAnnotation { get; }
         public SingleBomTableAnnotation(SingleBomTable table, IBomTableAnnotation anno) : base(table, (ITableAnnotation)anno)
         {
             TableAnnotation = anno;
         }
+        public SingleBomTableAnnotation(ISingleModelDoc doc, IBomTableAnnotation anno) : base(new SingleWeldmentCutListTable(doc,new SingleFeature(doc, (IFeature)anno.BomFeature.GetFeature())),  (ITableAnnotation)anno)
+        {
+            TableAnnotation = anno;
+        }
 
-        IEnumerable<ISingleBomColumn> ISingleBomTableAnnotation.Columns => (IEnumerable<ISingleBomColumn>)Columns;
-        public override IEnumerable<ISingleTableColumn> Columns
+        IList<ISingleBomColumn> ISingleBomTableAnnotation.Columns => Columns;
+        public override IList<ISingleBomColumn> Columns
         {
             get {
-                List<ISingleTableColumn> cols = new List<ISingleTableColumn>();
-                for (int i = 0; i < ColumnCount; i++)
+                List<ISingleBomColumn> cols = new List<ISingleBomColumn>();
+                int colCount = ColumnCount;
+                for (int i = 0; i < colCount ; i++)
                 {
                     cols.Add(new SingleBomColumn(this, i));
                 }
@@ -121,12 +150,14 @@ namespace SingularityCore
             }
         }
 
-        IEnumerable<ISingleBomRow> ISingleBomTableAnnotation.Rows => (IEnumerable<ISingleBomRow>)Rows;
-        public override IEnumerable<ISingleTableRow> Rows
+        IList<ISingleBomRow> ISingleBomTableAnnotation.Rows => Rows;
+        public override IList<ISingleBomRow> Rows
         {
             get {
-                List<ISingleTableRow> row = new List<ISingleTableRow>();
-                for (int i = 0; i < ColumnCount; i++)
+                List<ISingleBomRow> row = new List<ISingleBomRow>();
+                int count = RowCount;
+                int start = ((ITableAnnotation) TableAnnotation).GetHeaderCount();
+                for (int i = start; i < count; i++)
                 {
                     row.Add(new SingleBomRow(this, i));
                 }
@@ -146,18 +177,19 @@ namespace SingularityCore
 
     }
 
-    internal class SingleBomRow : SingleGenericRow, ISingleBomRow
+    internal class SingleBomRow : SingleGenericRow<ISingleBomCell>, ISingleBomRow
     {
         public SingleBomRow(ISingleBomTableAnnotation table, int rowNo) : base(table, rowNo) { }
 
         public new ISingleBomTableAnnotation Annotation => (ISingleBomTableAnnotation)base.Annotation;
-        public new IEnumerable<ISingleBomColumn> Columns => (IEnumerable<ISingleBomColumn>)base.Columns;
-        IEnumerable<ISingleBomCell> ISingleBomRow.Cells => (IEnumerable<ISingleBomCell>)Cells;
-        public override IEnumerable<ISingleTableCell> Cells
+        public new IList<ISingleBomColumn> Columns => Annotation.Columns;
+
+        IList<ISingleBomCell> ISingleBomRow.Cells => Cells;
+        public override IList<ISingleBomCell> Cells
         {
             get {
                 //Columns.Select(col => new SingleCutListCell(this, (SingleGenericColumn)col)).Cast<ISingleCutListCell>().ToList();
-                List<ISingleTableCell> cells = new List<ISingleTableCell>();
+                List<ISingleBomCell> cells = new List<ISingleBomCell>();
                 foreach (ISingleBomColumn col in Columns)
                 {
                     cells.Add(new SingleBomCell(this, (SingleBomColumn)col));
@@ -166,15 +198,26 @@ namespace SingularityCore
             }
         }
 
-        public IEnumerable<Component2> GetComponents(string configuration)
+        public IList<ISingleComponent> GetComponents(string configuration)
         {
-            return (Component2[])Annotation.TableAnnotation.GetComponents2(RowIndex, configuration);
+            IList<ISingleComponent> comps = new List<ISingleComponent>();
+            object cmp = Annotation.TableAnnotation.GetComponents2(RowIndex, Annotation.Table.Configuration);
+            if (cmp == null) return comps;
+
+            foreach (var cm in (object[])cmp)
+            {
+                comps.Add(new SingleComponent((IComponent2)cm));
+            }
+
+            return comps;
         }
 
-        public IEnumerable<ISingleModelDoc> GetModelPathNames(out string itemNumber, out string partNumber)
+        public IList<ISingleModelDoc> GetModelPathNames(out string itemNumber, out string partNumber)
         {
             List<ISingleModelDoc> docs = new List<ISingleModelDoc>();
-            foreach (string name in (string[])Annotation.TableAnnotation.GetModelPathNames(RowIndex, out itemNumber, out partNumber))
+            object obj = Annotation.TableAnnotation.GetModelPathNames(RowIndex, out itemNumber, out partNumber);
+            if (obj == null) return docs;
+            foreach (string name in (string[])obj )
             {
                 docs.Add(Annotation.Table.Document.SldWorks.GetDocumentByName(name));
             }
@@ -197,7 +240,14 @@ namespace SingularityCore
             return Annotation.TableAnnotation.RestoreRestructuredComponents(RowIndex);
         }
 
-
+        public string RowItemNumber
+        {
+            get
+            {
+                Annotation.TableAnnotation.GetModelPathNames(RowIndex,  out string itemNo, out string prtNumber);
+                return itemNo;
+            }
+        }
     }
 
     internal class SingleBomColumn : SingleGenericColumn, ISingleBomColumn
@@ -216,7 +266,7 @@ namespace SingularityCore
             set => Annotation.TableAnnotation.SetColumnUseTitleAsPartNumber(ColumnIndex, value);
         }
         public int GetAllCustomPropertiesCount { get => Annotation.TableAnnotation.GetAllCustomPropertiesCount(); }
-        public IEnumerable<string> GetAllCustomProperties => (string[])Annotation.TableAnnotation.GetAllCustomProperties();
+        public IList<string> GetAllCustomProperties => (string[])Annotation.TableAnnotation.GetAllCustomProperties();
     }
 
     internal class SingleBomCell : SingleGenericCell, ISingleBomCell

@@ -18,7 +18,7 @@ namespace SingularityCore
         internal SingleSldWorks Solidworks { get; }
         internal PluginLoader PluginLoader { get; }
         internal IconManager Icons { get; } = new IconManager();
-        internal CommandManager CmdMgr => Solidworks.CommandManager;
+        internal ISingleBaseObject<CommandManager> CmdMgr => Solidworks.CommandManager;
 
         public static NLog.Logger Logger { get; } = NLog.LogManager.GetLogger("CommandMgr");
         public static string DefaultRibbonName = "Singularity";
@@ -216,7 +216,7 @@ namespace SingularityCore
             {
 
                 Logger.Trace("Trying to create a flyout but this is not supported");
-                cmd.FlyGroup = CmdMgr.CreateFlyoutGroup2(cmd.Id, cmd.Command.CommandName, cmd.Command.CommandName, ((ISwCommand)cmd.Command).CommandToolTop,
+                cmd.FlyGroup = CmdMgr.BaseObject.CreateFlyoutGroup2(cmd.Id, cmd.Command.CommandName, cmd.Command.CommandName, ((ISwCommand)cmd.Command).CommandToolTop,
                     (object)Icons.AddinIconPaths, (object)Icons.CmdImagePaths, $"CommandCallBack({cmd.Id})", $"DisplayStatus({cmd.Id})");
                 cmd.ButtonId = cmd.FlyGroup.CmdID;
                 //Call this like this, as call backs will do it too.
@@ -236,7 +236,7 @@ namespace SingularityCore
 
                     //Get ribbon if its already created
                     Logger.Trace("Creating a new ribbion {0} for document type {1}", rib.RibbonName, docType);
-                    rib.CommandTab = CmdMgr.GetCommandTab((int)docType, rib.RibbonName);
+                    rib.CommandTab = CmdMgr.BaseObject.GetCommandTab((int)docType, rib.RibbonName);
 
 
 
@@ -244,7 +244,7 @@ namespace SingularityCore
                     if (rib.CommandTab != null && PluginLoader.NeedsReload)
                     {
                         Logger.Trace("Removing tab");
-                        CmdMgr.RemoveCommandTab((CommandTab)rib.CommandTab);
+                        CmdMgr.BaseObject.RemoveCommandTab((CommandTab)rib.CommandTab);
                         rib.CommandTab = null;
                     }
 
@@ -252,7 +252,7 @@ namespace SingularityCore
                     if (rib.CommandTab == null)
                     {
                         Logger.Trace("Creating a new tab for {0}", rib.RibbonName);
-                        rib.CommandTab = CmdMgr.AddCommandTab((int)docType, rib.RibbonName);
+                        rib.CommandTab = CmdMgr.BaseObject.AddCommandTab((int)docType, rib.RibbonName);
 
                         //Add each command on each tab     
                         foreach (IRibbonGroupCollection rtab in rib.SubRibbons)

@@ -71,7 +71,7 @@ namespace SingularityCore.UI
             try
             {
                 int err = 0; //swCreateCommandGroupErrors
-                CmdGroup = CommandManger.CmdMgr.CreateCommandGroup2(Id, parentPath + "&" + MenuName, "tip", "tip", 5,CommandManger.PluginLoader.NeedsReload, ref err);
+                CmdGroup = CommandManger.CmdMgr.BaseObject.CreateCommandGroup2(Id, parentPath + "&" + MenuName, "tip", "tip", 5,CommandManger.PluginLoader.NeedsReload, ref err);
                 if ((swCreateCommandGroupErrors) err != swCreateCommandGroupErrors.swCreateCommandGroup_Success)
                     return false;
 

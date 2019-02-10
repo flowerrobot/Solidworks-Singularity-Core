@@ -24,6 +24,8 @@ namespace SingularityCore
 
 
             Document.RegenPostNotify2 += RegenPostNotify2;
+             Document.RegenNotify += Document_RegenPreNotify;
+
             Document.AddCustomPropertyNotify += AddCustProp;
             Document.ChangeCustomPropertyNotify += ChangeCustProp;
             Document.DeleteCustomPropertyNotify += DeleteCustProp;
@@ -32,16 +34,27 @@ namespace SingularityCore
             Document.FileSaveNotify += SavePre;
             Document.FileSavePostCancelNotify += SaveCancelled;
             Document.FileSaveAsNotify2 += SaveAsPre;
+
+
+            Document.UserSelectionPostNotify += Document_UserSelectionPostNotify;
+            Document.UserSelectionPreNotify += DocumentOnUserSelectionPreNotify;
+            Document.ClearSelectionsNotify += DocumentOnClearSelectionsNotify;
+            Document.NewSelectionNotify += DocumentOnNewSelectionNotify;
+            Document.DeleteSelectionPreNotify += DocumentOnDeleteSelectionPreNotify;
+
+            Document.ModifyTableNotify += DocumentOnModifyTableNotify;
         }
 
         public ISingleCustomPropertyManager CustomPropertyManager(string configName)
         {
-            if (string.IsNullOrWhiteSpace(configName)) return CustomPropertyManager();
+            if (string.IsNullOrWhiteSpace(configName)) return CustomPropertyManager(configName);
             return Configuration(configName)?.CustomPropertyManager ?? null;
         }
 
-        private ISingleCutListManager _CutList;
-        public ISingleCutListManager CutList => _CutList ?? (_CutList = new SingleCutListManager(this));
+        public bool HasCutList => CutList.CutListCount > 0;
+
+        private ISingleCutListManager _cutList;
+        public ISingleCutListManager CutList => _cutList ?? (_cutList = new SingleCutListManager(this));
         
 
         public ISingleConfiguration Configuration(string name)
@@ -50,7 +63,7 @@ namespace SingularityCore
             if (!names.Any(t => t.Equals(name, StringComparison.CurrentCultureIgnoreCase))) return null;
             var con = _configs.FirstOrDefault(t => t.ConfigName.Equals(name, StringComparison.CurrentCultureIgnoreCase));
             if (con != null) return con;
-            con = new SingleConfiguration(this,ModelDoc.GetConfigurationByName(name));
+            con = new SingleConfiguration(this, (IConfiguration)ModelDoc.GetConfigurationByName(name));
             _configs.Add(con);
             return con;
         }
@@ -63,7 +76,7 @@ namespace SingularityCore
                 foreach (string name in (string[])ModelDoc.GetConfigurationNames())
                 {
                     if (null == _configs.FirstOrDefault(t => t.ConfigName.Equals(name, StringComparison.CurrentCultureIgnoreCase)))
-                        _configs.Add(new SingleConfiguration(this,ModelDoc.GetConfigurationByName(name)));
+                        _configs.Add(new SingleConfiguration(this,(IConfiguration)ModelDoc.GetConfigurationByName(name)));
                 }
                 return _configs.AsReadOnly();
             }
@@ -80,6 +93,14 @@ namespace SingularityCore
             Document.FileSaveNotify -= SavePre;
             Document.FileSavePostCancelNotify -= SaveCancelled;
             Document.FileSaveAsNotify2 -= SaveAsPre;
+
+            Document.UserSelectionPostNotify -= Document_UserSelectionPostNotify;
+            Document.UserSelectionPreNotify -= DocumentOnUserSelectionPreNotify;
+            Document.ClearSelectionsNotify -= DocumentOnClearSelectionsNotify;
+            Document.NewSelectionNotify -= DocumentOnNewSelectionNotify;
+            Document.DeleteSelectionPreNotify -= DocumentOnDeleteSelectionPreNotify;
+
+            Document.ModifyTableNotify -= DocumentOnModifyTableNotify;
         }
 
     }

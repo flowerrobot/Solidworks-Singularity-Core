@@ -3,20 +3,17 @@ using SolidWorks.Interop.sldworks;
 
 namespace SingularityCore
 {
-    internal class SingleAnnotationView : ISingleAnnotationView
+    internal class SingleAnnotationView :SingularityObject<IAnnotationView>, ISingleAnnotationView
     {
-        internal SingleAnnotationView(IAnnotationView view)
-        {
-            AnnotationView = view;
-        }
-        public IAnnotationView AnnotationView { get; }
-        public bool FlatPatternView => AnnotationView.FlatPatternView;
+        internal SingleAnnotationView(IAnnotationView view) : base(view){}
+
+        public bool FlatPatternView => BaseObject.FlatPatternView;
 
         public bool Show
         {
-            get => AnnotationView.IsShown();
+            get => BaseObject.IsShown();
             set {
-                if (value) AnnotationView.Show();
+                if (value) BaseObject.Show();
             }
         }
     }

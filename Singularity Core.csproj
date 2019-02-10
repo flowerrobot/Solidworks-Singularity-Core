@@ -34,46 +34,31 @@
     <ApplicationIcon>Images\SingularityIcon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
-      <HintPath>..\..\..\..\..\..\..\..\..\temp\_Nugetpackages\NLog.4.5.11\lib\net40-client\NLog.dll</HintPath>
-    </Reference>
-    <Reference Include="SolidWorks.Interop.sldworks, Version=25.5.0.83, Culture=neutral, PublicKeyToken=7c4797c3e4eeac03, processorArchitecture=MSIL">
-      <HintPath>..\..\..\..\..\..\..\..\..\temp\_Nugetpackages\Solidworks.Interop.Basic.17.5.2\lib\net20\SolidWorks.Interop.sldworks.dll</HintPath>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="SolidWorks.Interop.swcommands, Version=25.5.0.83, Culture=neutral, PublicKeyToken=0fda92720ba7919f, processorArchitecture=MSIL">
-      <HintPath>..\..\..\..\..\..\..\..\..\temp\_Nugetpackages\Solidworks.Interop.Basic.17.5.2\lib\net20\SolidWorks.Interop.swcommands.dll</HintPath>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="SolidWorks.Interop.swconst, Version=25.5.0.83, Culture=neutral, PublicKeyToken=19f43e188e4269d8, processorArchitecture=MSIL">
-      <HintPath>..\..\..\..\..\..\..\..\..\temp\_Nugetpackages\Solidworks.Interop.Basic.17.5.2\lib\net20\SolidWorks.Interop.swconst.dll</HintPath>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Configuration" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.ServiceModel" />
-    <Reference Include="System.Transactions" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-  </ItemGroup>
-  <ItemGroup>
     <Compile Include="Events\DocumentEvent.cs" />
     <Compile Include="Events\EventManager.cs" />
     <Compile Include="Events\MissingDocumentEvent.cs" />
+    <Compile Include="Helpers\SettingRest.cs" />
+    <Compile Include="Plugins\DefinedPluginViewModel.cs" />
+    <Compile Include="Plugins\PluginLoadedView.xaml.cs">
+      <DependentUpon>PluginLoadedView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Plugins\PluginLoadedViewModel.cs" />
     <Compile Include="Managers\SingleFeatureManager.cs" />
+    <Compile Include="Managers\SingleFlatPatternFolder.cs" />
+    <Compile Include="Managers\SingleMathUtility.cs" />
     <Compile Include="Managers\SingleSelectionManager.cs" />
     <Compile Include="Objects\SingleBody.cs" />
     <Compile Include="Objects\SingleAnnotation.cs" />
     <Compile Include="Objects\SingleAnnotationView.cs" />
     <Compile Include="Objects\SingleComponent.cs" />
     <Compile Include="Objects\SingleDrawingComponent.cs" />
+    <Compile Include="Objects\SingleEdge.cs" />
+    <Compile Include="Objects\SingleFace.cs" />
+    <Compile Include="Objects\SinglePoint.cs" />
+    <Compile Include="Objects\SingleVertex.cs" />
     <Compile Include="Objects\SingleView.cs" />
+    <Compile Include="Objects\_base\SingularityEntity.cs" />
+    <Compile Include="Objects\_base\SingularityObject.cs" />
     <Compile Include="Objects\Tables\old\SingleBomTableAnnotation.cs" />
     <Compile Include="Objects\Tables\SingleGenericTable.cs" />
     <Compile Include="Objects\Tables\SingleWeldmentCutListTable.cs" />
@@ -83,6 +68,7 @@
     <Compile Include="Objects\Tables\SingleGeneralTable.cs" />
     <Compile Include="Objects\Tables\old\SingleGenericTable.cs" />
     <Compile Include="Objects\Tables\old\SingleWeldmentCutListTable.cs" />
+    <Compile Include="Plugins\PluginsLoadData.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -133,7 +119,42 @@
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>C:\temp\_Nugetpackages\Newtonsoft.Json.12.0.1\lib\net40\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <HintPath>C:\temp\_Nugetpackages\NLog.4.5.11\lib\net40-client\NLog.dll</HintPath>
+    </Reference>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="SolidWorks.Interop.sldworks, Version=26.4.0.75, Culture=neutral, PublicKeyToken=7c4797c3e4eeac03, processorArchitecture=MSIL">
+      <HintPath>C:\temp\_Nugetpackages\Solidworks.Interop.Basic.18.4.0\lib\net20\SolidWorks.Interop.sldworks.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="SolidWorks.Interop.swcommands, Version=26.4.0.75, Culture=neutral, PublicKeyToken=0fda92720ba7919f, processorArchitecture=MSIL">
+      <HintPath>C:\temp\_Nugetpackages\Solidworks.Interop.Basic.18.4.0\lib\net20\SolidWorks.Interop.swcommands.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="SolidWorks.Interop.swconst, Version=26.4.0.75, Culture=neutral, PublicKeyToken=19f43e188e4269d8, processorArchitecture=MSIL">
+      <HintPath>C:\temp\_Nugetpackages\Solidworks.Interop.Basic.18.4.0\lib\net20\SolidWorks.Interop.swconst.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="Syncfusion.Data.WPF, Version=16.4400.0.42, Culture=neutral, PublicKeyToken=3d67ed1f87d44c89" />
+    <Reference Include="Syncfusion.SfGrid.WPF, Version=16.4400.0.42, Culture=neutral, PublicKeyToken=3d67ed1f87d44c89" />
+    <Reference Include="Syncfusion.Shared.Wpf, Version=16.4400.0.42, Culture=neutral, PublicKeyToken=3d67ed1f87d44c89" />
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Transactions" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
   <ItemGroup>
     <Content Include="Images\SingularityIcon.ico" />
     <Content Include="Images\Singularity_128.png" />
@@ -152,6 +173,13 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Page Include="Plugins\PluginLoadedView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

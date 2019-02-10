@@ -1,108 +1,75 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using SingularityBase;
-using SingularityCore.Managers;
+﻿using SingularityBase;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
+using System.Collections.Generic;
 
 namespace SingularityCore
 {
-   
-    internal class SingleCutListFolder : ISingleCutListFolder
+
+    internal class SingleCutListFolder : SingleCustomPropertyManager, ISingleCutListFolder
     {
-        public SingleCutListFolder(ISingleModelDoc doc, ISingleFeature feat)
-        {
-            Document = doc;
-            Feature = feat;
-        }
-        public SingleCutListFolder(ISingleModelDoc doc, IFeature feat)
-        {
-            Document = doc;
-            Feature = new SingleFeature(Document, feat);            
-        }
-        public string Name => Feature.Name;
         public ISingleFeature Feature { get; }
-        public ISingleModelDoc Document { get; }
+        public new IBodyFolder BaseObject { get; private set; }
+
+        public SingleCutListFolder(ISingleModelDoc doc, ISingleFeature feat) : base(doc, feat.BaseObject.CustomPropertyManager)
+        {
+            Feature = feat;
+            BaseObject = (IBodyFolder)feat.BaseObject.GetSpecificFeature2();
+        }
+        public SingleCutListFolder(ISingleModelDoc doc, IFeature feat) : this(doc, new SingleFeature(doc, feat)) { }
+
+        public string Name { get => Feature.Name; set => Feature.Name = value; }
+        public int Id => Feature.Id;
+        public int GetBodyCount => BaseObject.GetBodyCount();
 
 
-        public int GetBodyCount => CutFolder.GetBodyCount();
 
-        [Obsolete("By Product on inheritance")]
-        public ISingleConfiguration Configuration => throw new NotImplementedException();
 
-        
+        public IList<ISingleBody> GetBodies
+        {
+            get
+            {
+                IList<ISingleBody> bods = new List<ISingleBody>();
+                object[] bodies = (object[])BaseObject.GetBodies();
 
-        public IEnumerable<ISingleBody> GetBodies => (ISingleBody[])CutFolder.GetBodies();
+                foreach (IBody2 bod in bodies)
+                {
+                    bods.Add(new SingleBody(Document, bod));
+                }
 
-        public swBodyFolderFeatureType_e Type => (swBodyFolderFeatureType_e) CutFolder.Type;
-        public swCutListType_e CutListType => (swCutListType_e)CutFolder.GetCutListType();
+                return bods;
+            }
+        }
 
-        public bool AutomaticCutList { get=> CutFolder.GetAutomaticCutList(); set=> CutFolder.SetAutomaticCutList(value); }
-        public bool AutomaticUpdate { get => CutFolder.GetAutomaticUpdate(); set=> CutFolder.SetAutomaticCutList(value); }
-        public bool UpdateCutList() => CutFolder.UpdateCutList();
-        
+        public swBodyFolderFeatureType_e Type => (swBodyFolderFeatureType_e)BaseObject.Type;
+        public swCutListType_e CutListType => (swCutListType_e)BaseObject.GetCutListType();
 
-        public IBodyFolder CutFolder => Feature.Feature.GetSpecificFeature2();
+        public bool AutomaticCutList { get => BaseObject.GetAutomaticCutList(); set => BaseObject.SetAutomaticCutList(value); }
+        public bool AutomaticUpdate { get => BaseObject.GetAutomaticUpdate(); set => BaseObject.SetAutomaticCutList(value); }
+        public bool UpdateCutList() => BaseObject.UpdateCutList();
+
+
+
 
         ISingleModelDoc ISingleCustomPropertyManager.Document => Document;
 
         public override string ToString() => Name + " " + Type.ToString() + " " + CutListType.ToString();
-
-        
-
-
-        #region CustomProperties
-
-        public ICustomPropertyManager CustomPropertyManager => Feature.Feature.CustomPropertyManager;
-
-        
-
-        public swCustomInfoAddResult_e Add(string Name, swCustomInfoType_e Type, string Value, int OverwriteExisting)
+        public new void Dispose()
         {
-            return (swCustomInfoAddResult_e)CustomPropertyManager.Add3(Name, (int)Type, Value, OverwriteExisting);
+            System.Runtime.InteropServices.Marshal.ReleaseComObject(BaseObject);
+            BaseObject = null;
+            base.Dispose();
         }
 
-        public swCustomInfoDeleteResult_e Delete(string Name)
+        public override bool Equals(object obj)
         {
-            return (swCustomInfoDeleteResult_e)CustomPropertyManager.Delete2(Name);
+            return ((obj as ISingleCutListFolder)?.Id ?? 0) == Id;
         }
 
-        public swCustomInfoDeleteResult_e DeleteAll()
+        public override int GetHashCode()
         {
-            swCustomInfoDeleteResult_e res = swCustomInfoDeleteResult_e.swCustomInfoDeleteResult_NotPresent;
-            foreach(string name  in CustomPropertyManager.GetNames())
-            {
-                res = (swCustomInfoDeleteResult_e)CustomPropertyManager.Delete2(Name);
-            }
-            return res;            
+            return Id;
         }
-
-        public IEnumerable<ISingleCustomProperty> GetAll()
-        {
-            List<ISingleCustomProperty> res = new List<ISingleCustomProperty>();
-            foreach (string name in CustomPropertyManager.GetNames())
-            {
-                res.Add(new SingleCustomProperty(name, this, CustomPropertyType.Cutlist));
-            }
-            return res;
-        }
-
-        public ISingleCustomProperty GetProperty(string Name)
-        {
-            if(((string[])CustomPropertyManager.GetNames()).Any(t => t.Equals(Name, StringComparison.CurrentCultureIgnoreCase)))
-            {
-                return new SingleCustomProperty(Name, this, CustomPropertyType.Cutlist);
-            }
-            return null;
-        }
-
-        public swCustomInfoSetResult_e Set(string Name, string Value)
-        {
-            return (swCustomInfoSetResult_e)CustomPropertyManager.Set2(Name, Value);
-        }
-
-        #endregion
     }
+
 }

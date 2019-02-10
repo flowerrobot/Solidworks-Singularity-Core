@@ -1,12 +1,12 @@
 ﻿using SingularityBase;
 using SingularityBase.UI;
+using SingularityCore.Plugins;
 using SingularityCore.UI;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Environment = System.Environment;
 
 namespace SingularityCore
 {
@@ -16,60 +16,63 @@ namespace SingularityCore
     internal class PluginLoader
     {
         private static NLog.Logger Logger { get; } = NLog.LogManager.GetLogger("PluginLoader");
-        public static string WorkingPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Singularity\");
-
-
-        internal DirectoryInfo PluginFolder = new DirectoryInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "", @"Plugins\")); //This is the folder this dll is in
+        /// <summary>
+        /// The counter for command Ids
+        /// </summary>
+         internal static int CmdCounter { get; set; }= 0;
 
         private static readonly Type BaseFunc = typeof(ISwBaseFunction);
         private static readonly Type FlyOutBtnFunc = typeof(ISwFlyOutButton);
 
 
         /// <summary>
+        /// This is the location for the local user
+        /// </summary>
+        internal DirectoryInfo WorkingPath { get; } = new DirectoryInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Singularity\"));
+        /// <summary>
+        /// This is the directory for the plugin files, based on the main files + plugin path
+        /// </summary>
+        internal DirectoryInfo PluginFolder { get; } = new DirectoryInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "", @"Plugins\")); //This is the folder this dll is in
+
+      
+
+
+        /// <summary>
         /// Core files are plugins which are part of the core Singularity
         /// </summary>
 #if DEBUG
-        private readonly FileInfo[] coreFiles = new[] { new FileInfo(@"C:\Users\sethr\OneDrive\Documents\Programming\GitHub\Solidworks Addin\Singularity Addin\Singularity Tests\bin\Debug\Singularity Tests.dll") };
+        private readonly FileInfo[] coreFiles = new[] { new FileInfo(@"E:\OneDrive\Documents\Programming\GitHub\Solidworks Addin\Singularity Addin\Singularity Tests\bin\Debug\Singularity Tests.dll") };
 #else
         private readonly FileInfo[] coreFiles = new[] { new new FileInfo(System.IO.Path.Combine(DirectoryPath, "OswCoreCommands.dll"))};
 #endif
 
-        /// <summary>
-        /// xmlName - for what?
-        /// </summary>
-#if DEBUG
-        private readonly string xmlName = @"C:\Users\setruh\OneDrive\Documents\Programming\BitBucket\SW Addin\OswCore\ModuleLoader\Modules.xml";
-#else
-        private readonly string xmlName = System.IO.Path.Combine(DirectoryPath, "Modules.xml");
-#endif
-
-        /// <summary>
-        /// This path is where the information about any user stored files to load
-        /// </summary>
-        private readonly string userXml = Path.Combine(WorkingPath, @"UserProfile.xml");
+       
 
         /// <summary>
         /// List of all plugins to be implemented
         /// </summary>
         public List<DefinedPlugin> Plugins { get; } = new List<DefinedPlugin>();
+
         /// <summary>
         /// List of plugins to be loaded at users request
         /// </summary>
-        // TODO to be implemented later
         public List<DefinedPlugin> UserPlugins { get; } = new List<DefinedPlugin>();
+
+        /// <summary>
+        /// The data of the last load, files to avoid and user specifed files
+        /// </summary>
+        private PluginsLoadData PluginsData { get; }
 
         /// <summary>
         /// Informs if Solidworks needs to reload menus, this is due to a module having changed.
         /// </summary>
         public bool NeedsReload { get; internal set; }
 
-        SingleSldWorks SolidWorks { get; }
-
-
+        private SingleSldWorks SolidWorks { get; }
         internal PluginLoader(SingleSldWorks solidWorks, SingleCommandMgr mgr)
         {
             SolidWorks = solidWorks;
-            //DirectoryPath = System.IO.Path.GetDirectoryName(this.GetType().Assembly.Location);
+            PluginsData = PluginsLoadData.LoadSettings(WorkingPath);
 
         }
 
@@ -84,163 +87,70 @@ namespace SingularityCore
             //Search and load plugins in the plugins folder - file locate\plugin
             Dictionary<string, FileInfo> plugFiles = new Dictionary<string, FileInfo>();
             SearchThisDir(ref plugFiles, PluginFolder);
-            if (plugFiles.Any()) LoadPluginFromFiles(plugFiles.Values);
+            if (plugFiles.Any()) LoadPluginFromFiles(plugFiles.Values).ForEach(t => Plugins.Add(t));//- and add it too the list of plugins
+
 
             //Load any files to user has specifically request to load.
-            //This is specified in the  userXml
-            //TODO Implement this + UI
-
-
-            //Must check versions of files loaded last time vs last time if different 
-            //TODO implement
-            NeedsReload = true;
-
-#if DEBUG
-            NeedsReload = true;
-#endif
-
-        }
-
-        /// <summary>
-        /// Searches and loads all modules and commands
-        /// </summary>
-        [Obsolete("Implemented again using different logic", true)]
-        internal void LoadPlugins_Old()
-        {
-
-
-            #region Load corecommands
-            //Load and add to Modules Libary
-            LoadPluginFromFiles(coreFiles).ForEach(t => Plugins.Add(t));
-            #endregion
-            #region Load standard files
-            //load settings from XML next to dll.
-            // Loads any modules from the XML file, updates existing records for must load
-            List<DefinedPlugin> modsInXML = LoadFromXml(xmlName);
-            modsInXML.ForEach(t => Plugins.Add(t)); //Add to global list
-            #endregion
-            #region Load User Files
-            //Load from user XML or search
-            try
+            List<FileInfo> userFiles = new List<FileInfo>();
+            foreach (PluginsData pluginsData in PluginsData.UserLoaded)
             {
-                List<DefinedPlugin> modsInUserXML;
-                if (System.IO.File.Exists(userXml))
-                    modsInUserXML = LoadFromXml(userXml);
-                else
-                {
-                    //Do a search for avalible modules and write to xml.
-                    //modsInUserXML = SearchForModules(Plugins);
-                    NeedsReload = true;
-                }
-
-              //  modsInUserXML.ForEach(t => Plugins.Add(t));
-
-
-                //Write to user XML all command that have been loaded
-             //   WriteCommandsToXml(userXml, modsInUserXML);
+                if (File.Exists(pluginsData.FullFileName))
+                    userFiles.Add(new FileInfo(pluginsData.FullFileName));
             }
-            catch (Exception ex) { Logger.Error(ex); }
-            #endregion
+            if (userFiles.Any()) LoadPluginFromFiles(userFiles).ForEach(t => Plugins.Add(t));//- and add it too the list of plugins
 
 
-            List<DefinedPlugin> lastLoadedFiles = new List<DefinedPlugin>(); //TODO load from storage the modules loaded last time
-            //Check all loaded modules to see if they all match filename & version, if not reload
-            //Then if any modules loaded last time are left over = reload
-            foreach (DefinedPlugin df in Plugins)
+            //*** Must check versions of files loaded last time vs last time if different 
+
+            //First create a list of files loaded to be stored.
+            Dictionary<PluginsData, Boolean> pd = new Dictionary<PluginsData, bool>();
+            foreach (DefinedPlugin plugIn in Plugins)
             {
-                DefinedPlugin found = lastLoadedFiles.FirstOrDefault(llf => llf.File.Name.Equals(df.File.Name) && llf.AssemblyVersion.Equals(df.AssemblyVersion));
-                if (found == null)
+                pd.Add(new PluginsData(plugIn), false);
+            }
+
+            KeyValuePair<PluginsData, bool> defaultStrut= new KeyValuePair<PluginsData, bool>();
+
+            //check if all values match, based on the file last loaded
+            foreach (PluginsData lL in PluginsData.LastLoadedPlugins)
+            {
+                //Check last loaded against the list.
+                KeyValuePair<PluginsData, bool> fnd = pd.FirstOrDefault(p =>
+                    p.Value != true &&
+                    p.Key.FullFileName.Equals(lL.FullFileName, StringComparison.CurrentCultureIgnoreCase) &&
+                    p.Key.Version == lL.Version &&
+                    p.Key.EditDate == lL.EditDate);
+
+                if (fnd.Equals(defaultStrut))
+                {
+                    pd[fnd.Key] = true;
+                }
+                else
                 {
                     NeedsReload = true;
                     break;
                 }
-                else
-                    lastLoadedFiles.Remove(found);
+            }
+            //Makes sure there is no new files that had nothing compared
+            if (!NeedsReload)
+            {
+                NeedsReload = pd.Values.All(b => b == true);
             }
 
-            NeedsReload = NeedsReload || lastLoadedFiles.Any();
-            //TODO save files
+
+            //Save new files and blacklisted files to settings
+            PluginsData.LastLoadedPlugins = pd.Keys.ToList();
+            PluginsData.SaveSettings();
+
 #if DEBUG
             NeedsReload = true;
 #endif
-        }
 
-        #region  Publics        
-        /// <summary>
-        /// Looks for any modules with the file paths given
-        /// </summary>
-        /// <param name="files">The files.</param>
-        /// <returns></returns>
-        public bool LoadNewModulesNextStart(List<FileInfo> files)
-        {
-            List<DefinedPlugin> items = LoadPluginFromFiles(files);
-
-            if (items.Any())
-            {
-                WriteCommandsToXml(userXml, Plugins);
-            }
-
-            return items.Any();
-        }
-
-        /// <summary>
-        /// Removes the commands from the settings when loading up next restart.
-        /// </summary>
-        /// <param name="mods">The mods.</param>
-        /// <returns></returns>
-        private bool RemoveCommands(IEnumerable<DefinedPlugin> mods)
-        {
-            try
-            {
-                //TODO implement correctly
-                foreach (DefinedPlugin mod in mods)
-                {
-                    //if (Properties.Settings.Default.ModulesLastLoaded.Contains(mod.File.FullName)) 
-                    //Properties.Settings.Default.ModulesLastLoaded.Remove(mod.File.FullName);
-                }
-                Properties.Settings.Default.Save();
-                return true;
-            }
-            catch (Exception ex) { Logger.Error(ex); }
-            return false;
-        }
-        #endregion
-        #region Private
-        internal static int CmdCounter = 0;
-        private List<DirectoryInfo> _filePaths;
-        private List<DirectoryInfo> FilePaths
-        {
-            get {
-                if (_filePaths == null)
-                {
-                    Logger.Trace("Loading file paths");
-                    _filePaths = new List<DirectoryInfo>
-                    {
-                        new DirectoryInfo(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().GetName().CodeBase).Remove(0, 6)),
-                        new DirectoryInfo(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().GetName().CodeBase).Remove(0, 6) + @"\Modules\")
-                    };
-                    foreach (string path in Properties.Settings.Default.FilePaths.Split(';'))
-                    {
-                        Logger.Trace("User path defined {0}", path);
-                        if (!string.IsNullOrWhiteSpace((path)))
-                        {
-                            DirectoryInfo di = new DirectoryInfo(path);
-                            if (di.Exists)
-                            {
-                                _filePaths.Add(di);
-                            }
-                            else
-                            {
-                                Logger.Trace("Path does not exist");
-                            }
-                        }
-                    }
-                }
-                return _filePaths;
-            }
         }
 
        
+
+        #region Private
         /// <summary>
         /// Will search each file listed for any classes that implement the required modules.
         /// </summary>
@@ -274,7 +184,7 @@ namespace SingularityCore
                         //Loop through each type found
                         foreach (Type type in assembly.GetTypes())
                         {
-                            // We only want to create an instance if is a normal command, but is not a flyout button - as they will be created differently
+                            // We only want to create an instance if is a normal command, but is not a flyout button - as they will be created differently from the type definition
                             if (BaseFunc.IsAssignableFrom(type) && !FlyOutBtnFunc.IsAssignableFrom(type) && !(type.IsAbstract || type.IsInterface))
                             {
                                 try
@@ -283,11 +193,11 @@ namespace SingularityCore
                                     if (Activator.CreateInstance(type) is ISwBaseFunction instance)
                                     {
                                         SingleBaseCommand cmd;
-                                        if (instance is ISwFlyOut Flyout)
+                                        if (instance is ISwFlyOut flyout)
                                         {
-                                            cmd = new SingleBaseFlyoutGroup(SolidWorks, Flyout, CmdCounter += 1, newPlugin);
+                                            cmd = new SingleBaseFlyoutGroup(SolidWorks, flyout, CmdCounter += 1, newPlugin);
                                             //Through each sub button implement it if suitable
-                                            foreach (Type subBtnType in Flyout.SubButtons)
+                                            foreach (Type subBtnType in flyout.SubButtons)
                                             {
                                                 //Check suitability
                                                 if (FlyOutBtnFunc.IsAssignableFrom(subBtnType) && !(type.IsAbstract || type.IsInterface) && Activator.CreateInstance(subBtnType) is ISwFlyOutButton subBtn)
@@ -305,11 +215,17 @@ namespace SingularityCore
                                     }
                                 }
                                 catch (Exception ex) { Logger.Error(ex); }
-
-                                
                             }
                         }
-                        if (newPlugin.Functions.Any()) found.Add(newPlugin);
+                        //Check if this file has any commands
+                        if (newPlugin.Functions.Any())
+                        {
+                            found.Add(newPlugin);
+                        }
+                        else //Add it to the black list of files that are not plugins
+                        {
+                            PluginsData.BlackListedFiles.Add(dll.FullName);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -323,33 +239,13 @@ namespace SingularityCore
                 Logger.Error(ex);
                 return found;
             }
-         }
-        /// <summary>
-        /// Gets all directories where this DLLS is in search for more modules to load
-        /// </summary>
-        /// <returns></returns>
-        private List<FileInfo> FindAllDlls()
-        {
-
-            Dictionary<string, FileInfo> dlls = new Dictionary<string, FileInfo>();
-
-            //Add this file so the core functions can be added
-            FileInfo thisfile = new FileInfo(GetType().Assembly.Location);
-            dlls.Add(thisfile.Name, thisfile);
-
-            //Search through all sub folders in path looking at dlls
-            foreach (DirectoryInfo path in FilePaths)
-            {
-                SearchThisDir(ref dlls, path);
-            }
-
-            return dlls.Values.ToList();
         }
+
         /// <summary>
-        /// Searches the nominated directory, which it will do recursivly for each sub folder
+        /// Searches the nominated directory for any file that is a .dll and is not part of the existing collection,  it will do recursivly for each sub folder
         /// </summary>
-        /// <param name="dlls">The DLLS.</param>
-        /// <param name="dirPath">The dirpath.</param>
+        /// <param name="dlls">The DLLS already found</param>
+        /// <param name="dirPath">The directory path.</param>
         private void SearchThisDir(ref Dictionary<string, FileInfo> dlls, DirectoryInfo dirPath)
         {
             if (!dirPath.Exists) return;
@@ -370,81 +266,6 @@ namespace SingularityCore
             catch (Exception ex) { Logger.Error(ex); }
 
         }
-
-        private List<DefinedPlugin> LoadFromXml(string xmlFile)
-        {
-            return new List<DefinedPlugin>();
-        }
-        private bool WriteCommandsToXml(string userXmlPath, IEnumerable<DefinedPlugin> mods)
-        {
-            return true;
-        }
-        ///// <summary>
-        ///// Loads settings from XML.
-        ///// </summary>
-        ///// <param name="xmlFile">Name of the XML.</param>
-        ///// <returns></returns>
-        //private List<DefinedPlugin> LoadFromXml(string xmlFile)
-        //{
-
-        //    List<DefinedPlugin> modules = new List<DefinedPlugin>();
-        //    try
-        //    {
-        //        if (File.Exists(xmlFile))
-        //        {
-        //            XmlSerializer ser = new XmlSerializer(typeof(root));
-        //            using (FileStream fs = new FileStream(xmlFile, FileMode.Open))
-        //            {
-        //                if (ser.Deserialize(fs) is root xml && xml.ModuleDef.Count != 0)
-        //                    //Loop for each item in the xml, if the file exists load its modules within
-        //                    foreach (root.ModuleDefRow item in xml.ModuleDef)
-        //                        if (File.Exists(item.Path))
-        //                            //Set the must load flag if mentioned in the xml
-        //                            modules.AddRange(LoadPluginFromFiles(new[] { new FileInfo(item.Path) }.ToList()));
-        //            }
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Logger.Error(ex);
-        //    }
-        //    return modules;
-        //}
-        ////
-        ///// <summary>
-        ///// Writes the commands to XML.
-        ///// </summary>
-        ///// <param name="userXmlPath">The user XML file</param>
-        ///// <param name="mods">The Modules to write</param>
-        ///// <returns>Was successful</returns>
-        //private bool WriteCommandsToXml(string userXmlPath, IEnumerable<DefinedPlugin> mods)
-        //{
-        //    try
-        //    {
-        //        if (!File.Exists(userXmlPath))
-        //        {
-        //            Directory.CreateDirectory(Path.GetDirectoryName(userXmlPath) ?? "");
-        //            File.Create(userXmlPath).Close();
-        //        }
-
-
-
-        //        root r = new root();
-
-        //        foreach (DefinedPlugin cmd in mods)
-        //            r.ModuleDef.AddModuleDefRow(cmd.File.FullName, true);
-
-
-        //        XmlSerializer ser = new XmlSerializer(typeof(root));
-        //        using (StreamWriter stream = new StreamWriter(userXmlPath))
-        //            ser.Serialize(stream, r);
-
-        //        return true;
-        //    }
-        //    catch (Exception ex) { Logger.Error(ex); }
-        //    return false;
-        //}
-
         #endregion
     }
 }

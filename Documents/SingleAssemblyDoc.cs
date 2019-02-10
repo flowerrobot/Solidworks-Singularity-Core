@@ -17,11 +17,14 @@ namespace SingularityCore
         public AssemblyDoc Document { get; }
         public override swDocumentTypes_e Type => swDocumentTypes_e.swDocASSEMBLY;
 
-        internal SingleAssemblyDoc(AssemblyDoc doc) : base((ModelDoc2)doc)
+        internal SingleAssemblyDoc(AssemblyDoc doc) : base((IModelDoc2)doc)
         {
             Document = doc;
 
             Document.RegenPostNotify2 += RegenPostNotify2;
+            Document.RegenNotify += Document_RegenPreNotify;
+
+
             Document.AddCustomPropertyNotify += AddCustProp;
             Document.ChangeCustomPropertyNotify += ChangeCustProp;
             Document.DeleteCustomPropertyNotify += DeleteCustProp;
@@ -30,11 +33,22 @@ namespace SingularityCore
             Document.FileSaveNotify += SavePre;
             Document.FileSavePostCancelNotify += SaveCancelled;
             Document.FileSaveAsNotify2 += SaveAsPre;
+
+            Document.UserSelectionPostNotify += Document_UserSelectionPostNotify;
+            Document.UserSelectionPreNotify += DocumentOnUserSelectionPreNotify;
+            Document.ClearSelectionsNotify += DocumentOnClearSelectionsNotify;
+            Document.NewSelectionNotify += DocumentOnNewSelectionNotify;
+            Document.DeleteSelectionPreNotify += DocumentOnDeleteSelectionPreNotify;
+
+            Document.ModifyTableNotify += DocumentOnModifyTableNotify;
         }
+
+       
+
 
         public ISingleCustomPropertyManager CustomPropertyManager(string configName)
         {
-            if (string.IsNullOrWhiteSpace(configName)) return CustomPropertyManager();
+            if (string.IsNullOrWhiteSpace(configName)) return CustomPropertyManager(configName);
             return Configuration(configName)?.CustomPropertyManager ?? null;
         }
 
@@ -44,7 +58,7 @@ namespace SingularityCore
             if (!names.Any(t => t.Equals(name, StringComparison.CurrentCultureIgnoreCase))) return null;
             var con = _configs.FirstOrDefault(t => t.ConfigName.Equals(name, StringComparison.CurrentCultureIgnoreCase));
             if (con != null) return con;
-            con = new SingleConfiguration(this,((ModelDoc2)Document).GetConfigurationByName(name));
+            con = new SingleConfiguration(this,(IConfiguration)ModelDoc.GetConfigurationByName(name));
             _configs.Add(con);
             return con;
         }
@@ -55,10 +69,10 @@ namespace SingularityCore
         public IEnumerable<ISingleConfiguration> Configurations
         {
             get {
-                foreach (string name in (string[])((ModelDoc2)Document).GetConfigurationNames())
+                foreach (string name in (string[])ModelDoc.GetConfigurationNames())
                 {
                     if (null == _configs.FirstOrDefault(t => t.ConfigName.Equals(name, StringComparison.CurrentCultureIgnoreCase)))
-                        _configs.Add(new SingleConfiguration(this,((ModelDoc2)Document).GetConfigurationByName(name)));
+                        _configs.Add(new SingleConfiguration(this,(IConfiguration)ModelDoc.GetConfigurationByName(name)));
                 }
                 return _configs.AsReadOnly();
             }
@@ -75,6 +89,14 @@ namespace SingularityCore
             Document.FileSaveNotify -= SavePre;
             Document.FileSavePostCancelNotify -= SaveCancelled;
             Document.FileSaveAsNotify2 -= SaveAsPre;
+
+            Document.UserSelectionPostNotify -= Document_UserSelectionPostNotify;
+            Document.UserSelectionPreNotify -= DocumentOnUserSelectionPreNotify;
+            Document.ClearSelectionsNotify -= DocumentOnClearSelectionsNotify;
+            Document.NewSelectionNotify -= DocumentOnNewSelectionNotify;
+            Document.DeleteSelectionPreNotify -= DocumentOnDeleteSelectionPreNotify;
+
+            Document.ModifyTableNotify -= DocumentOnModifyTableNotify;
         }
     }
 }

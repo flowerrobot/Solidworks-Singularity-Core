@@ -3,27 +3,23 @@ using SolidWorks.Interop.sldworks;
 
 namespace SingularityCore
 {
-    internal class SingleDrawingComponent : ISingleDrawingComponent
+    internal class SingleDrawingComponent :SingularityObject<IDrawingComponent>, ISingleDrawingComponent
     {
-        private IDrawingComponent DrawingComponent { get; }
 
-        public SingleDrawingComponent(IDrawingComponent comp)
-        {
-            DrawingComponent = comp;
-        }
+        public SingleDrawingComponent(IDrawingComponent comp) : base(comp){}
 
-        public ISingleComponent Component => new SingleComponent(DrawingComponent.Component);
+        public ISingleComponent Component => new SingleComponent(BaseObject.Component);
         public bool Select(int mark) => Select(false, mark);
 
         public bool Select(bool append, int mark)
         {
-            ISelectData a = Component.Document.SelectionManager.CreateSelectData;
-            a.Mark = mark;
+            var a = Component.Document.SelectionManager.CreateSelectData;
+            a.BaseObject.Mark = mark;
 
-            return DrawingComponent.Select(append, (SelectData)a);
+            return BaseObject.Select(append, (SelectData)a.BaseObject);
         }
 
-        public bool DeSelect() => DrawingComponent.DeSelect();
+        public bool DeSelect() => BaseObject.DeSelect();
 
 
 

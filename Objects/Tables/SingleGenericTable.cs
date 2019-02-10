@@ -2,11 +2,12 @@
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace SingularityCore
 {
-    internal abstract class SingleTableAnnotation : ISingleTableAnnotation
+    internal abstract class SingleTableAnnotation<Tc,Tr> : ISingleTableAnnotation where Tr: ISingleTableRow where Tc:ISingleTableColumn
         {
         public ISingleTable Table { get; private set; }
         public ITableAnnotation TableAnnotation { get; private set; }
@@ -17,11 +18,14 @@ namespace SingularityCore
         }
 
         
-        public ISingleAnnotation GetAnnotation { get; }//=> new SingleAnnotation(Table.Document, this, TableAnnotation.GetAnnotation());
+        public  ISingleAnnotation GetAnnotation { get; }//=> new SingleAnnotation(Table.Document, this, TableAnnotation.GetAnnotation());
         public swTableAnnotationType_e TableType => (swTableAnnotationType_e)TableAnnotation.Type;
 
-        public abstract IEnumerable<ISingleTableColumn> Columns { get; }
-        public abstract IEnumerable<ISingleTableRow> Rows { get; }
+       public abstract IList<Tc> Columns { get; }
+        public abstract IList<Tr> Rows { get; }
+
+        IList<ISingleTableColumn> ISingleTableAnnotation.Columns => (IList<ISingleTableColumn>)Columns;
+        IList<ISingleTableRow> ISingleTableAnnotation.Rows => (IList < ISingleTableRow >) Rows;
 
         public bool UseDocTextFormat
         {
@@ -101,25 +105,26 @@ namespace SingularityCore
         }
         public bool StopAutoSplitting { get => TableAnnotation.StopAutoSplitting; set => TableAnnotation.StopAutoSplitting = value; }
 
+         
 
         public bool DeleteColumn(int index)
         {
-            foreach (SingleGenericRow row in Rows)
+            foreach (var row in Rows)
             {
-                ((List<SingleGenericColumn>) row.Columns).RemoveAt(index);
+                ((List<ISingleTableColumn>) Columns).RemoveAt(index);
             }
-            ((List<SingleGenericColumn>) Columns).RemoveAt(index);
+            ((List<ISingleTableColumn>) Columns).RemoveAt(index);
 
           return  this.TableAnnotation.DeleteColumn(index);
         }
 
         public bool DeleteRow(int index)
         {
-            foreach (SingleGenericColumn col in Columns)
+            foreach (ISingleTableColumn col in Columns)
             {
-                ((List<SingleGenericRow>)col.Rows).RemoveAt(index);
+                ((List<ISingleTableRow>)col.Rows).RemoveAt(index);
             }
-            ((List<SingleGenericRow>)Rows).RemoveAt(index);
+            ((List<ISingleTableRow>)Rows).RemoveAt(index);
 
             return this.TableAnnotation.DeleteRow(index);
         }
@@ -136,7 +141,7 @@ namespace SingularityCore
 
     }
 
-    internal abstract class SingleGenericRow : ISingleTableRow, IDisposable
+    internal abstract class SingleGenericRow<Tcell> : ISingleTableRow, IDisposable where Tcell:ISingleTableCell
     {
         protected SingleGenericRow(ISingleTableAnnotation table, int rowNo)
         {
@@ -147,8 +152,10 @@ namespace SingularityCore
         public int RowIndex { get; }
 
         public ISingleTableAnnotation Annotation { get; }
-        public IEnumerable<ISingleTableColumn> Columns => Annotation.Columns;
-        public abstract IEnumerable<ISingleTableCell> Cells { get; }
+        public IList<ISingleTableColumn> Columns => Annotation.Columns;
+
+         IList<ISingleTableCell> ISingleTableRow.Cells => (IList<ISingleTableCell>)Cells;
+        public abstract IList<Tcell> Cells { get; }
 
         public double GetRowHeight() => Annotation.TableAnnotation.GetRowHeight(RowIndex);
 
@@ -170,7 +177,7 @@ namespace SingularityCore
 
     internal abstract class SingleGenericColumn : ISingleTableColumn, IDisposable
     {
-        protected SingleGenericColumn(SingleTableAnnotation table, int columnNo)
+        protected SingleGenericColumn(ISingleTableAnnotation table, int columnNo)
         {
             ColumnIndex = columnNo;
             Annotation = table;
@@ -178,21 +185,21 @@ namespace SingularityCore
 
         public int ColumnIndex { get; }
         public ISingleTableAnnotation Annotation { get; }
-        public IEnumerable<ISingleTableRow> Rows => Annotation.Rows;
+        public IList<ISingleTableRow> Rows => Annotation.Rows;
 
         public double GetColumnWidth => Annotation.TableAnnotation.GetColumnWidth(ColumnIndex);
         public double SetColumnWidth(double width, swTableRowColSizeChangeBehavior_e options) => Annotation.TableAnnotation.SetColumnWidth(ColumnIndex, width, (int) options);
         
 
-        public swTableColumnTypes_e GetColumnType {
+        public swTableColumnTypes_e ColumnType {
             get => (swTableColumnTypes_e)Annotation.TableAnnotation.GetColumnType(ColumnIndex);
             set => Annotation.TableAnnotation.SetColumnType(ColumnIndex, (int) value);
         }
-        public string GetColumnTitle {
+        public string ColumnTitle {
             get =>Annotation.TableAnnotation.GetColumnTitle(ColumnIndex);
             set => Annotation.TableAnnotation.SetColumnTitle(ColumnIndex, value);
         }
-        public bool GetLockColumnWidth
+        public bool LockColumnWidth
         {
             get => Annotation.TableAnnotation.GetLockColumnWidth(ColumnIndex);
             set => Annotation.TableAnnotation.SetLockColumnWidth(ColumnIndex, value);
@@ -213,14 +220,14 @@ namespace SingularityCore
     internal abstract class SingleGenericCell: ISingleTableCell
       
     {
-        internal SingleGenericCell(SingleGenericRow row, SingleGenericColumn column)
+        internal SingleGenericCell(ISingleTableRow row, ISingleTableColumn column)
         {
             Row = row;
             Column = column;
             
 
-            RowIndex = ((SingleGenericRow)row).RowIndex;
-            ColumnIndex = ((SingleGenericColumn) column).ColumnIndex;
+            RowIndex = row.RowIndex;
+            ColumnIndex = column.ColumnIndex;
         }
         internal int RowIndex { get; }
         internal int ColumnIndex { get; }
@@ -240,7 +247,7 @@ namespace SingularityCore
             set => Row.Annotation.TableAnnotation.SetCellTextFormat(RowIndex, ColumnIndex, CellUseDocTextFormat, value);
 
         }
-        public bool MergeCells(ISingleTableRow rowEnd, ISingleTableColumn columnEnd) => Row.Annotation.TableAnnotation.MergeCells(RowIndex, ColumnIndex, ((SingleGenericRow) rowEnd).RowIndex,((SingleGenericColumn) columnEnd).ColumnIndex);
+        public bool MergeCells(ISingleTableRow rowEnd, ISingleTableColumn columnEnd) => Row.Annotation.TableAnnotation.MergeCells(RowIndex, ColumnIndex, ((ISingleTableRow) rowEnd).RowIndex,(columnEnd).ColumnIndex);
         
 
         public bool UnMergeCells() => Row.Annotation.TableAnnotation.UnmergeCells(RowIndex, ColumnIndex);

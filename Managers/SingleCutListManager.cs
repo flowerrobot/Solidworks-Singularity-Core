@@ -3,55 +3,21 @@ using SolidWorks.Interop.sldworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using SolidWorks.Interop.swconst;
 
-namespace SingularityCore.Managers
+namespace SingularityCore
 {
     internal class SingleCutListManager : ISingleCutListManager
     {
-        //public SingleCutListManager(ISinglePartDoc doc, IFeature feat)
-        //{
-        //    Document = doc;
-        //    if (feat.GetTypeName2().Equals(FeatureName.SolidBodyFolder.ToString(), StringComparison.CurrentCultureIgnoreCase))
-        //    {
-        //        _cutFeature = feat;
-        //    }
-        //}
+       
         public SingleCutListManager(ISinglePartDoc doc)
         {
             Document = doc;
         }
         public ISinglePartDoc Document { get; }
-#if obsolete
 
-        private IFeature _cutFeature;
-        public IFeature CutFeature
-        {
-            get {
-                if (_cutFeature != null) return _cutFeature;
-                foreach (IFeature fea in Document.GetFeatures)
-                {
-                    if (fea.GetTypeName2().Equals(FeatureName.SolidBodyFolder.ToString(), StringComparison.CurrentCultureIgnoreCase))
-                    {
-                        _cutFeature = fea;
-                        return _cutFeature;
-                    }
-                }
-                return _cutFeature;
-            }
-        }
-        public IBodyFolder CutFolder => CutFeature?.GetSpecificFeature2() as IBodyFolder;
-
-        public bool AutomaticUpdate { get => CutFolder.GetAutomaticUpdate(); set => CutFolder.SetAutomaticUpdate(value); }
-        public bool AutomaticCutList { get => CutFolder.GetAutomaticCutList(); set => CutFolder.SetAutomaticCutList(value); }
-      
-      
-
-        [Obsolete("Configurations don't work with cutlists")]
-        public ISingleConfiguration Configuration => throw new NotImplementedException();
-
-        public ICustomPropertyManager CustomPropertyManager => CutFeature.CustomPropertyManager;
-#endif
-        public IEnumerable<ISingleCutListFolder> CutListFolders
+        
+        public IList<ISingleCutListFolder> CutListFolders
         {
             get {
                 List<ISingleCutListFolder> lst = new List<ISingleCutListFolder>();
@@ -83,9 +49,9 @@ namespace SingularityCore.Managers
 
 
         public bool UpdateCutList() => UpdateCutList(false);
-        public bool UpdateCutList(bool RebuildFlatPattern)
+        public bool UpdateCutList(bool rebuildFlatPattern)
         {
-            if (RebuildFlatPattern)
+            if (rebuildFlatPattern)
             {
 
                 using (IDisposable a = Document.ActiveView.DisableGraphicsUpdate)
@@ -108,6 +74,56 @@ namespace SingularityCore.Managers
             foreach (ISingleCutListFolder var in CutListFolders)
             {
                 res = res && var.UpdateCutList();
+            }
+
+            return res;
+        }
+
+        /// <summary>
+        /// Will add a property for all cut list items
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="type"></param>
+        /// <param name="value"></param>
+        /// <param name="overrideIfExisting"></param>
+        public void AddCustomProperty(string name, swCustomInfoType_e type,string value, swCustomPropertyAddOption_e overrideIfExisting)
+        {
+            
+            foreach (var fld in CutListFolders)
+            {
+                fld.Add(name, type, value, overrideIfExisting);
+            }
+        }
+        public void DeleteCustomProperty(string name)
+        {
+            foreach (var fld in CutListFolders)
+            {
+                fld.Delete(name);
+            }
+        }
+        public void DeleteAllCustomProperties()
+        {
+            foreach (var fld in CutListFolders)
+            {
+                fld.DeleteAll();
+            }
+        }
+
+        public IDictionary<ISingleBody, ISingleCutListFolder> GetCutListFolders(IList<ISingleBody> bodies)
+        {
+            IDictionary<ISingleBody, ISingleCutListFolder> res = new Dictionary<ISingleBody, ISingleCutListFolder>();
+            var flders = CutListFolders;
+
+            foreach (ISingleBody bod in bodies)
+            {
+                foreach (ISingleCutListFolder folder in flders)
+                {
+
+                    if (folder.GetBodies.Any(t => t.Equals(bod)))
+                    {
+                        res.Add(bod, folder);
+                    }
+                }
             }
 
             return res;

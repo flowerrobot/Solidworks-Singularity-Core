@@ -2,17 +2,18 @@
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace SingularityCore
 {
     internal class SingleWeldmentCutListTable : SingleFeature, ISingleWeldmentCutListTable
     {
         public IWeldmentCutListFeature TableFeature { get; internal set; }
-        public SingleWeldmentCutListTable(ISingleModelDoc doc, ISingleFeature weldTable) : base(doc, weldTable.Feature)
+        public SingleWeldmentCutListTable(ISingleModelDoc doc, ISingleFeature weldTable) : base(doc, weldTable.BaseObject)
         {
-            TableFeature = weldTable.Feature.GetSpecificFeature2();
+            TableFeature = (IWeldmentCutListFeature)weldTable.BaseObject.GetSpecificFeature2();
         }
-        
+
 
         public ISingleView View
         {
@@ -31,7 +32,7 @@ namespace SingularityCore
 
                                 if (tblAnnotation.Type == swTableAnnotationType_e.swTableAnnotation_WeldmentCutList)
                                 {
-                                    if (((ISingleWeldmentCutListAnnotation) tblAnnotation).Table.Id == Id)
+                                    if (((ISingleWeldmentCutListAnnotation)tblAnnotation).Table.Id == Id)
                                         return view;
                                 }
                             }
@@ -43,19 +44,19 @@ namespace SingularityCore
             }
         }
 
-        public IEnumerable<ISingleWeldmentCutListAnnotation> TableAnnotations
+        public IList<ISingleWeldmentCutListAnnotation> TableAnnotations
         {
             get {
                 List<ISingleWeldmentCutListAnnotation> docs = new List<ISingleWeldmentCutListAnnotation>();
                 foreach (object anno in (object[])TableFeature.GetTableAnnotations())
                 {
-                    docs.Add(new SingleWeldmentCutListAnnotation(this, (IWeldmentCutListAnnotation )anno));
+                    docs.Add(new SingleWeldmentCutListAnnotation(this, (IWeldmentCutListAnnotation)anno));
                 }
 
                 return docs;
             }
         }
-        IEnumerable<ISingleTableAnnotation> ISingleTable.TableAnnotations => TableAnnotations;
+        IList<ISingleTableAnnotation> ISingleTable.TableAnnotations => (IList<ISingleTableAnnotation>)TableAnnotations;
 
 
         public string Configuration { get => TableFeature.Configuration; set => TableFeature.Configuration = value; }
@@ -67,7 +68,7 @@ namespace SingularityCore
 
 
 
-        public new void Dispose() 
+        public new void Dispose()
         {
             base.Dispose();
             System.Runtime.InteropServices.Marshal.ReleaseComObject(TableFeature);
@@ -75,7 +76,7 @@ namespace SingularityCore
         }
     }
 
-    internal class SingleWeldmentCutListAnnotation : SingleTableAnnotation, ISingleWeldmentCutListAnnotation
+    internal class SingleWeldmentCutListAnnotation : SingleTableAnnotation<ISingleCutListColumn,ISingleCutListRow>, ISingleWeldmentCutListAnnotation
     {
         public new IWeldmentCutListAnnotation TableAnnotation { get; }
         public SingleWeldmentCutListAnnotation(ISingleWeldmentCutListTable table, IWeldmentCutListAnnotation anno) : base(table, (ITableAnnotation)anno)
@@ -83,17 +84,17 @@ namespace SingularityCore
             TableAnnotation = anno;
 
         }
-        public SingleWeldmentCutListAnnotation(ISingleModelDoc doc, IWeldmentCutListAnnotation anno) : base(new SingleWeldmentCutListTable(doc, new SingleFeature(doc, (IFeature)anno.WeldmentCutListFeature)), (ITableAnnotation)anno)
+        public SingleWeldmentCutListAnnotation(ISingleModelDoc doc, IWeldmentCutListAnnotation anno) : base(new SingleWeldmentCutListTable(doc, new SingleFeature(doc, (IFeature)anno.WeldmentCutListFeature.GetFeature())), (ITableAnnotation)anno)
         {
             TableAnnotation = anno;
 
         }
 
-        IEnumerable<ISingleCutListColumn> ISingleWeldmentCutListAnnotation.Columns => (IEnumerable<ISingleCutListColumn>)Columns;
-        public override IEnumerable<ISingleTableColumn> Columns
+        IList<ISingleCutListColumn> ISingleWeldmentCutListAnnotation.Columns => (IList<ISingleCutListColumn>)Columns;
+        public override IList<ISingleCutListColumn> Columns
         {
             get {
-                List<ISingleCutListColumn> cols = new List<ISingleCutListColumn>();
+                IList<ISingleCutListColumn> cols = new List<ISingleCutListColumn>();
                 for (int i = 0; i < ColumnCount; i++)
                 {
                     cols.Add(new SingleCutListColumn(this, i));
@@ -102,39 +103,40 @@ namespace SingularityCore
             }
         }
 
-        IEnumerable<ISingleCutListRow> ISingleWeldmentCutListAnnotation.Rows => (IEnumerable<ISingleCutListRow>)Rows;
-        public override IEnumerable<ISingleTableRow> Rows
+        IList<ISingleCutListRow> ISingleWeldmentCutListAnnotation.Rows => (IList<ISingleCutListRow>)Rows;
+        public override IList<ISingleCutListRow> Rows
         {
             get {
-                List<ISingleCutListRow> row = new List<ISingleCutListRow>();
+                IList<ISingleCutListRow> row = new List<ISingleCutListRow>();
                 for (int i = 0; i < ColumnCount; i++)
                 {
                     row.Add(new SingleCutListRow(this, i));
                 }
-                return row;
+
+                return (IList<ISingleCutListRow>)row;
             }
         }
 
-        
+
 
 
         public bool Sort(int columnIndex, bool sortAscending) => TableAnnotation.Sort(columnIndex, sortAscending);
     }
 
-    internal class SingleCutListRow : SingleGenericRow, ISingleCutListRow
+    internal class SingleCutListRow : SingleGenericRow<ISingleCutListCell>, ISingleCutListRow
     {
         public SingleCutListRow(SingleWeldmentCutListAnnotation table, int rowNo) : base(table, rowNo) { }
 
         public new ISingleWeldmentCutListAnnotation Annotation => (ISingleWeldmentCutListAnnotation)base.Annotation;
 
 
-        public new IEnumerable<ISingleCutListColumn> Columns => (IEnumerable<ISingleCutListColumn>)base.Columns;
-        IEnumerable<ISingleCutListCell> ISingleCutListRow.Cells => (IEnumerable<ISingleCutListCell>)Cells;
-        public override IEnumerable<ISingleTableCell> Cells
+        public new IList<ISingleCutListColumn> Columns => Annotation.Columns;
+        IList<ISingleCutListCell> ISingleCutListRow.Cells => (IList<ISingleCutListCell>)Cells;
+        public override IList<ISingleCutListCell> Cells
         {
             get {
                 //Columns.Select(col => new SingleCutListCell(this, (SingleGenericColumn)col)).Cast<ISingleCutListCell>().ToList();
-                List<ISingleTableCell> cells = new List<ISingleTableCell>();
+                List<ISingleCutListCell> cells = new List<ISingleCutListCell>();
                 foreach (ISingleCutListColumn col in Columns)
                 {
                     cells.Add(new SingleCutListCell(this, (SingleCutListColumn)col));
@@ -146,9 +148,7 @@ namespace SingularityCore
 
     internal class SingleCutListColumn : SingleGenericColumn, ISingleCutListColumn
     {
-        public SingleCutListColumn(SingleWeldmentCutListAnnotation table, int columnNo) : base(table, columnNo)
-        {
-        }
+        public SingleCutListColumn(SingleWeldmentCutListAnnotation table, int columnNo) : base(table, columnNo){}
 
         public new ISingleWeldmentCutListAnnotation Annotation => (ISingleWeldmentCutListAnnotation)base.Annotation;
 
@@ -158,7 +158,7 @@ namespace SingularityCore
             set => Annotation.TableAnnotation.SetColumnCustomProperty(ColumnIndex, value);
         }
         public int GetAllCustomPropertiesCount => Annotation.TableAnnotation.GetAllCustomPropertiesCount();
-        public IEnumerable<string> GetAllCustomProperties => (string[])Annotation.TableAnnotation.GetAllCustomProperties();
+        public IList<string> GetAllCustomProperties => (string[])Annotation.TableAnnotation.GetAllCustomProperties();
     }
 
     internal class SingleCutListCell : SingleGenericCell, ISingleCutListCell

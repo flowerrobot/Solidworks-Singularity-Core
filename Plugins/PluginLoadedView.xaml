@@ -1,0 +1,33 @@
+﻿<UserControl x:Class="SingularityCore.Loader.PluginLoadedView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:SingularityCore.Loader"
+             xmlns:sf="http://schemas.syncfusion.com/wpf"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <Style TargetType="sf:VirtualizingCellsControl" x:Key="customRowStyle">
+            <Setter Property="Background" Value="Bisque"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding ViewExists}" Value="Trie">
+                    <Setter Property="Background" Value="Green"></Setter>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding AlreadyCreated}" Value="True">
+                    <Setter Property="IsEnabled" Value="False"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+    <Grid>
+        <sf:SfDataGrid  ItemsSource="{Binding Rows}" DockPanel.Dock="Top" RowStyle="{StaticResource customRowStyle}" AutoGenerateColumns="False">
+
+            <sf:SfDataGrid.Columns>
+                <sf:GridCheckBoxColumn MappingName="ViewExists" HeaderText="Generate"/>
+                <sf:GridTextColumn MappingName="Name" HeaderText="Body Name"/>
+                <sf:GridTextColumn MappingName="Description" HeaderText="Description"/>
+            </sf:SfDataGrid.Columns>
+        </sf:SfDataGrid>
+    </Grid>
+</UserControl>

@@ -16,7 +16,7 @@ namespace SingularityCore
 
         public ISingleModelDoc Document { get; }
 
-        public IEnumerable<ISingleWeldmentCutListTable> GetWeldmentTables
+        public IList<ISingleWeldmentCutListTable> GetWeldmentTables
         {
             get
             {
@@ -37,7 +37,7 @@ namespace SingularityCore
             }
         }
 
-        public IEnumerable<ISingleBomTable> GetBomTables
+        public IList<ISingleBomTable> GetBomTables
         {
             get
             {

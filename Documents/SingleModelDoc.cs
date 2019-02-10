@@ -1,6 +1,6 @@
 ﻿using SingularityBase;
 using SingularityBase.Events;
-using SingularityCore.Managers;
+using SingularityCore.Events;
 using SolidWorks.Interop.sldworks;
 using SolidWorks.Interop.swconst;
 using System;
@@ -19,14 +19,18 @@ namespace SingularityCore
             ModelDoc = doc;
         }
 
+
         public IModelDoc2 ModelDoc { get; }
         public abstract swDocumentTypes_e Type { get; }
 
         private ISingleCustomPropertyManager docProp;
+
+
         public ISingleCustomPropertyManager CustomPropertyManager()
         {
+
             if (docProp != null) return docProp;
-            docProp = new SingleCustomPropertyManager(this, null);
+            docProp = new SingleCustomPropertyManager(this);
 
             return docProp;
         }
@@ -37,27 +41,10 @@ namespace SingularityCore
 
 
         private ISingleSelectionManager _selectionManager;
-        public ISingleSelectionManager SelectionManager =>_selectionManager ?? (_selectionManager = new SingleSelectionManager(ModelDoc.SelectionManager));
+        public ISingleSelectionManager SelectionManager => _selectionManager ?? (_selectionManager = new SingleSelectionManager((ISelectionMgr)ModelDoc.SelectionManager));
 
 
         public ISingleSldWorks SldWorks => SingleSldWorks.GetSolidworks;
-        //public ISingleFeature GetFirstFeature => new SingleFeature(this,ModelDoc.FirstFeature());
-        //public ISingleFeature GetNextFeature(ISingleFeature next) => next.GetNextFeature;
-        //public IEnumerable<ISingleFeature> GetFeatures
-        //{
-        //    get {
-        //        List<ISingleFeature> lst = new List<ISingleFeature>();
-        //        ISingleFeature feat = GetFirstFeature;
-        //        while (feat != null)
-        //        {
-        //            lst.Add(feat);
-        //            feat = feat.GetNextFeature;
-        //        }
-        //        return lst;
-        //    }
-        //}
-
-
 
         public ISingleModelView ActiveView => new SingleModelView(this);
 
@@ -66,7 +53,6 @@ namespace SingularityCore
         {
             ModelDoc.ClearSelection2(true);
         }
-
 
         public bool EditUnsuppress(IEnumerable<IFeature> features)
         {
@@ -103,9 +89,7 @@ namespace SingularityCore
         public bool EditUnsuppress() => ModelDoc.EditUnsuppress2();
         public bool EditSuppress() => ModelDoc.EditSuppress2();
 
-
-
-        public bool ForceRebuild(bool TopOnly)  => ModelDoc.ForceRebuild3(TopOnly);
+        public bool ForceRebuild(bool TopOnly) => ModelDoc.ForceRebuild3(TopOnly);
 
         public swActivateDocError_e ActivateDoc(bool useUserPreferences = true, swRebuildOnActivation_e option = swRebuildOnActivation_e.swDontRebuildActiveDoc)
         {
@@ -118,20 +102,29 @@ namespace SingularityCore
 
         private ITableManager _tableMgr;
         public ITableManager Tables => _tableMgr ?? (_tableMgr = new TableManager(this));
+        public ISingleMathUtility MathUtility => SldWorks.MathUtility;
 
         #region Events
 
 
 
 
-        public event AddCustomPropertyEventHandler AddCustomProperty;
-        public event ChangeCustomPropertyEventHandler ChangeCustomProperty;
-        public event DeleteCustomPropertyEventHandler DeleteCustomProperty;
-        public event RegenPostNotifyEventHandler RegenPostNotify;
+        public event AddCustomPropertyEventHandler CustomPropertyAdded;
+        public event ChangeCustomPropertyEventHandler CustomPropertyChanged;
+        public event DeleteCustomPropertyEventHandler CustomPropertyDeleted;
+        public event RegenPeNotifyHandler RegenPreNotify;
+        public event RegenPostNotifyHandler RegenPostNotify;
+        public event UserSelectionPostNotifyHandler UserSelectionPostNotify;
+        public event UserSelectionPreNotifyHandler UserSelectionPreNotify;
+        public event ClearSelectionsNotifyHandler ClearSelectionsNotify;
+        public event NewSelectionPostNotifyHandler NewSelectionPostNotify;
+        public event DeleteSelectionPreNotifyHandler DeleteSelectionPreNotify;
+
         public event FileSavePreNotify SavePreNotify;
         public event FileSavePostNotify SavePostNotify;
         public event FileSaveCancelledNotify SaveCancelledNotify;
         public event FileSaveAsPreNotify SaveAsPreNotify;
+        public event ModifyTableNotifyHandler ModifyTableNotify;
 
         #region  EventSuprression
 
@@ -167,68 +160,189 @@ namespace SingularityCore
 
         internal int AddCustProp(string propName, string Configuration, string Value, Int32 valueType)
         {
-
-            if (AddCustomProperty != null && CanRaiseEvent)
-                return AddCustomProperty(propName, Configuration, Value, valueType);
-            return 1;
+            using (UserEvent ue = new UserEvent(null, EventType.AddinEventReaction, null))
+            {
+                if (CustomPropertyAdded != null && CanRaiseEvent)
+                    return (int)CustomPropertyAdded(this, propName, Configuration, Value, valueType);
+                return 1;
+            }
         }
+
         internal int ChangeCustProp(string propName, string Configuration, string oldValue, string NewValue, Int32 valueType)
         {
-            if (ChangeCustomProperty != null && CanRaiseEvent)
-                return ChangeCustomProperty?.Invoke(propName, Configuration, oldValue, NewValue, valueType) ?? 1;
-            return 1;
+            using (UserEvent ue = new UserEvent(null, EventType.AddinEventReaction, null))
+            {
+                if (CustomPropertyChanged != null && CanRaiseEvent)
+                    return (int)CustomPropertyChanged.Invoke(this, propName, Configuration, oldValue, NewValue,
+                        valueType);
+                return 1;
+            }
         }
+
         internal int DeleteCustProp(string propName, string Configuration, string Value, Int32 valueType)
         {
-            if (DeleteCustomProperty != null && CanRaiseEvent)
-                return DeleteCustomProperty(propName, Configuration, Value, valueType);
-            return 1;
+            using (UserEvent ue = new UserEvent(null, EventType.AddinEventReaction, null))
+            {
+                if (CustomPropertyDeleted != null && CanRaiseEvent)
+                    return (int)CustomPropertyDeleted(this, propName, Configuration, Value, valueType);
+                return 1;
+            }
         }
         #endregion
         #region Saving
         internal int SaveAsPre(string filename)
         {
-            if (SaveAsPreNotify != null & CanRaiseEvent)
-                return SaveAsPre(filename);
-            return 1;
+            using (UserEvent ue = new UserEvent(null, EventType.AddinEventReaction, null))
+            {
+                if (SaveAsPreNotify != null & CanRaiseEvent)
+                    return (int)SaveAsPreNotify(this, filename);
+                return 1;
+            }
         }
         internal int SavePre(string filename)
         {
-            if (SavePreNotify != null & CanRaiseEvent)
-                return SavePreNotify(filename);
-            return 1;
+            using (UserEvent ue = new UserEvent(null, EventType.AddinEventReaction, null))
+            {
+                if (SavePreNotify != null & CanRaiseEvent)
+                    return (int)SavePreNotify(this, filename);
+                return 1;
+            }
         }
         internal int SavePost(int savetype, string filename)
         {
-            if (SavePostNotify != null & CanRaiseEvent)
-                return SavePostNotify(savetype, filename);
-            return 1;
+            using (UserEvent ue = new UserEvent(null, EventType.AddinEventReaction, null))
+            {
+                if (SavePostNotify != null & CanRaiseEvent)
+                    return (int)SavePostNotify(this, savetype, filename);
+                return 1;
+            }
         }
         internal int SaveCancelled()
         {
-            if (SaveCancelledNotify != null & CanRaiseEvent)
-                return SaveCancelledNotify();
-            return 1;
+            using (UserEvent ue = new UserEvent(null, EventType.AddinEventReaction, null))
+            {
+                if (SaveCancelledNotify != null & CanRaiseEvent)
+                    return (int)SaveCancelledNotify(this);
+                return 1;
+            }
         }
 
 
         #endregion
 
-        public int RegenPostNotify2(object stopFeature)
+        internal int RegenPostNotify2(object stopFeature)
         {
-            if (stopFeature == null && RegenPostNotify != null && CanRaiseEvent)
-                return RegenPostNotify();
+            using (UserEvent ue = new UserEvent(null, EventType.AddinEventReaction, null))
+            {
+                if (RegenPostNotify != null) return (int)RegenPostNotify.Invoke(this);
+                return 1;
+            }
+        }
+        internal int RegenPostNotify3()
+        {
+            using (UserEvent ue = new UserEvent(null, EventType.AddinEventReaction, null))
+            {
+                if (RegenPostNotify != null) return (int)RegenPostNotify.Invoke(this);
+            }
+            return (int)EventResponse.Okay;
+
+
+        }
+        internal int Document_RegenPreNotify()
+        {
+            using (UserEvent ue = new UserEvent(null, EventType.AddinEventReaction, null))
+            {
+                if (RegenPreNotify != null) return (int)RegenPreNotify.Invoke(this);
+            }
+
             return 1;
         }
-        public int RegenPostNotify3()
+        #region Selection
+
+
+
+        internal int DocumentOnDeleteSelectionPreNotify()
         {
-            if (RegenPostNotify != null && CanRaiseEvent)
-                return RegenPostNotify();
+            using (UserEvent ue = new UserEvent(null, EventType.AddinEventReaction, null))
+            {
+                if (DeleteSelectionPreNotify != null) return (int)DeleteSelectionPreNotify.Invoke(this);
+            }
+
+            return 1;
+        }
+
+        internal int DocumentOnNewSelectionNotify()
+        {
+            using (UserEvent ue = new UserEvent(null, EventType.AddinEventReaction, null))
+            {
+                if (NewSelectionPostNotify != null) return (int)NewSelectionPostNotify.Invoke(this);
+            }
+
+            return 1;
+        }
+
+        internal int DocumentOnClearSelectionsNotify()
+        {
+            using (UserEvent ue = new UserEvent(null, EventType.AddinEventReaction, null))
+            {
+                if (ClearSelectionsNotify != null) return (int)ClearSelectionsNotify.Invoke(this);
+            }
+
+            return 1;
+        }
+
+        internal int DocumentOnUserSelectionPreNotify(int seltype)
+        {
+            using (UserEvent ue = new UserEvent(null, EventType.AddinEventReaction, null))
+            {
+                if (UserSelectionPreNotify != null) return (int)UserSelectionPreNotify.Invoke(this, (swSelectType_e)seltype);
+            }
+
+            return 1;
+        }
+
+        internal int Document_UserSelectionPostNotify()
+        {
+            using (UserEvent ue = new UserEvent(null, EventType.AddinEventReaction, null))
+            {
+                if (UserSelectionPostNotify != null) return (int)UserSelectionPostNotify.Invoke(this);
+            }
+
             return 1;
         }
 
 
 
+        #endregion
+
+        internal int DocumentOnModifyTableNotify(TableAnnotation tableannotation, int tabletype, int reason, int rowinfo, int columninfo, string datainfo)
+        {
+            using (UserEvent ue = new UserEvent(null, EventType.AddinEventReaction, null))
+            {
+                if (ModifyTableNotify != null)
+                {
+                    ISingleTableAnnotation tbl = null;
+                    switch ((swTableAnnotationType_e)tabletype)
+                    {
+                        case swTableAnnotationType_e.swTableAnnotation_BillOfMaterials:
+                            tbl = new SingleBomTableAnnotation(this, (IBomTableAnnotation)tableannotation);
+                            break;
+                        case swTableAnnotationType_e.swTableAnnotation_General:
+
+                            break;
+                        case swTableAnnotationType_e.swTableAnnotation_WeldmentCutList:
+                            tbl = new SingleWeldmentCutListAnnotation(this, (IWeldmentCutListAnnotation)tableannotation);
+                            break;
+                    }
+
+                    if (tbl == null) return 1;
+
+                    return (int)ModifyTableNotify.Invoke(this, tbl, (swTableAnnotationType_e)tabletype, (swModifyTableNotifyReason_e)reason, rowinfo, columninfo, datainfo);
+
+                }
+            }
+            return 1;
+        }
 
         #endregion
     }

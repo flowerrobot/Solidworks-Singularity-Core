@@ -43,7 +43,6 @@ namespace SingularityCore
         /// <summary>
         /// Indicates if an enabled command, takes into account must load
         /// </summary>
-
         internal DefinedPlugin(Assembly assembly) //, FileInfo loadedFrom, string version = "")
         {
             Assembly = assembly;

@@ -24,8 +24,8 @@ namespace SingularityCore.Managers
                 string val = RawValue;
                 var type = Type;
                 //TODO add event for change
-                CustPropMgr.Delete(_name);
-                CustPropMgr.Add(value, type, val, 1);
+                //CustPropMgr.Delete(_name);
+                CustPropMgr.Add(value, type, val, swCustomPropertyAddOption_e.swCustomPropertyReplaceValue);
                 _name = value;
             }
         }
@@ -33,7 +33,7 @@ namespace SingularityCore.Managers
         public string RawValue
         {
             get {
-                CustPropMgr.CustomPropertyManager.Get5(Name, true, out string val, out string res, out bool WasResolved);
+                CustPropMgr.BaseObject.Get5(Name, true, out string val, out string res, out bool WasResolved);
                 return val;
             }
             set => CustPropMgr.Set(Name, value);
@@ -43,20 +43,20 @@ namespace SingularityCore.Managers
         public string ResolvedValue
         {
             get {
-                CustPropMgr.CustomPropertyManager.Get5(Name, true, out string val, out string res, out bool WasResolved);
+                CustPropMgr.BaseObject.Get5(Name, true, out string val, out string res, out bool WasResolved);
                 return res;
             }
         }
 
         public swCustomInfoType_e Type
         {
-            get => (swCustomInfoType_e)CustPropMgr.CustomPropertyManager.GetType2(Name);
+            get => (swCustomInfoType_e)CustPropMgr.BaseObject.GetType2(Name);
             set {
                 if (Type == value) return;
                 string val = RawValue;
                 //TODO add events to notify for this
-                CustPropMgr.Delete(_name);
-                CustPropMgr.Add(_name, value, val, 1);
+               // CustPropMgr.Delete(_name);
+                CustPropMgr.Add(_name, value, val, swCustomPropertyAddOption_e.swCustomPropertyDeleteAndAdd);
             }
         }
 
